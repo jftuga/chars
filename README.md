@@ -42,3 +42,10 @@ PS C:\chars> .\chars.exe *
 | testfile2       |    0 |   21 |    0 |   2269 |    0 |     1 |
 +-----------------+------+------+------+--------+------+-------+
 ```
+
+## Wikipedia
+
+* [Newline](https://en.wikipedia.org/wiki/Newline#Representation) - `CRLF` vs `LF`
+* [Tab key](https://en.wikipedia.org/wiki/Tab_key#Tab_characters)
+* [Null character](https://en.wikipedia.org/wiki/Null_character)
+* [Byte order mark](https://en.wikipedia.org/wiki/Byte_order_mark) - `BOM-8` vs `BOM-16`
