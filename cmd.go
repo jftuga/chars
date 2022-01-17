@@ -10,7 +10,6 @@ Pass wildcard filename globs on the command line
 package main
 
 import (
-	"bufio"
 	"flag"
 	"fmt"
 	"os"
@@ -26,7 +25,7 @@ import (
 const pgmName string = "chars"
 const pgmDesc string = "Determine the end-of-line format, tabs, bom, and nul"
 const pgmUrl string = "https://github.com/jftuga/chars"
-const pgmVersion string = "1.2.0"
+const pgmVersion string = "1.2.1"
 
 type FileStat struct {
 	filename string
@@ -82,29 +81,6 @@ func isText(s []byte) bool {
 		return false
 	}
 	return true
-}
-
-// getFile - return the contents of a file in a []byte slice
-func getFile(filename string) ([]byte, error) {
-	file, err := os.Open(filename)
-
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	stats, statsErr := file.Stat()
-	if statsErr != nil {
-		return nil, statsErr
-	}
-
-	var size int64 = stats.Size()
-	bytes := make([]byte, size)
-
-	buf := bufio.NewReader(file)
-	_, err = buf.Read(bytes)
-
-	return bytes, err
 }
 
 // detect - tabulate the total number of special characters
@@ -182,7 +158,7 @@ func processGlob(globArg string, allStats *[]FileStat, examineBinary bool, exclu
 				continue
 			}
 		}
-		data, err2 := getFile(filename)
+		data, err2 := os.ReadFile(filename)
 		if !examineBinary {
 			if !isText(data) {
 				// fmt.Printf("skipping binary file: %s\n", filename)
