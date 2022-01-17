@@ -30,12 +30,12 @@ const pgmVersion string = "1.2.0"
 
 type FileStat struct {
 	filename string
-	crlf     string
-	lf       string
-	tab      string
-	bom8     string
-	bom16    string
-	nul      string
+	crlf     int
+	lf       int
+	tab      int
+	bom8     int
+	bom16    int
+	nul      int
 }
 
 // usage - display help when no cmd-line args given
@@ -143,7 +143,7 @@ func detect(filename string, data []byte) FileStat {
 		}
 	}
 
-	return FileStat{filename: filename, crlf: strconv.Itoa(crlf), lf: strconv.Itoa(lf), tab: strconv.Itoa(tab), bom8: strconv.Itoa(bom8), bom16: strconv.Itoa(bom16), nul: strconv.Itoa(nul)}
+	return FileStat{filename: filename, crlf: crlf, lf: lf, tab: tab, bom8: bom8, bom16: bom16, nul: nul}
 }
 
 // output - display a text table with each filename and the number of special characters
@@ -158,7 +158,7 @@ func output(allStats []FileStat, maxLength int) {
 		} else {
 			name = ellipsis.Shorten(s.filename, maxLength)
 		}
-		row := []string{name, s.crlf, s.lf, s.tab, s.nul, s.bom8, s.bom16}
+		row := []string{name, strconv.Itoa(s.crlf), strconv.Itoa(s.lf), strconv.Itoa(s.tab), strconv.Itoa(s.nul), strconv.Itoa(s.bom8), strconv.Itoa(s.bom16)}
 		table.Append(row)
 	}
 	table.Render()
@@ -173,19 +173,19 @@ func processGlob(globArg string, allStats *[]FileStat, examineBinary bool, exclu
 	for _, filename := range globFiles {
 		info, _ := os.Stat(filename)
 		if info.IsDir() {
-			//fmt.Printf("skipping directory: %s\n", filename)
+			// fmt.Printf("skipping directory: %s\n", filename)
 			continue
 		}
 		if excludeMatched != nil {
 			if excludeMatched.Match([]byte(filename)) {
-				//fmt.Printf("excluding file: %s\n", filename)
+				// fmt.Printf("excluding file: %s\n", filename)
 				continue
 			}
 		}
 		data, err2 := getFile(filename)
 		if !examineBinary {
 			if !isText(data) {
-				//fmt.Printf("skipping binary file: %s\n", filename)
+				// fmt.Printf("skipping binary file: %s\n", filename)
 				continue
 			}
 		}
@@ -194,7 +194,7 @@ func processGlob(globArg string, allStats *[]FileStat, examineBinary bool, exclu
 			continue
 		}
 
-		//fmt.Println(filename)
+		// fmt.Println(filename)
 		stats := detect(filename, data)
 		*allStats = append(*allStats, stats)
 	}
