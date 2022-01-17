@@ -1,7 +1,5 @@
 # chars
 Determine the end-of-line format, tabs, bom, and nul characters
-* Pass (multiple) filename wildcards on the command line
-* use `-b` to also examine binary files
 
 ## Download
 
