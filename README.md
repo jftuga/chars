@@ -11,19 +11,27 @@ Binaries for Windows, MacOS, Linux and FreeBSD are provided on the
 ## Usage
 
 ```shell
-chars v1.1.0
+chars v1.2.0
 Determine the end-of-line format, tabs, bom, and nul
 https://github.com/jftuga/chars
 
 Usage:
 chars [file-glob 1] [file-glob 2] ...
   -b    examine binary files
+  -e string
+        exclude based on regular expression; use .* instead of *
+  -l int
+        shorten files names to a maximum of the length
 
 Notes:
 Also try: chars *  -or-  chars */*  -or-  chars */*/*
 ```
 
-## Example
+## Example 1
+
+* Run `chars` with no additional cmd-line switches
+* * Only report files in the current directory
+* * Report text files only since `-b` is not used
 
 ```shell
 PS C:\chars> .\chars.exe *
@@ -43,9 +51,35 @@ PS C:\chars> .\chars.exe *
 +-----------------+------+------+------+--------+------+-------+
 ```
 
+## Example 2
+
+* Run `chars` with `-e` and `-l` cmd-line switches
+* * Only report files starting with `p` in the `C:\Windows\System32` directory
+* * Exclude all files matching `perf.*dat`
+* * Shorten filenames to a maximum length of `32`
+
+```shell
+PS C:\chars> .\chars.exe -e perf.*dat -l 32 C:\Windows\System32\p*
+
++----------------------------------+------+------+-----+------+------+-------+
+|             FILENAME             | CRLF |  LF  | TAB | NUL  | BOM8 | BOM16 |
++----------------------------------+------+------+-----+------+------+-------+
+| C:\Windows\System32\pcl.sep      |   11 |   11 |   0 |    0 |    0 |     0 |
+| C:\Windows\System32\perfmon.msc  | 1933 | 1933 |   0 |    0 |    0 |     0 |
+| C:\Windows\Sys...tmanagement.msc | 1945 | 1945 |   0 |    0 |    0 |     0 |
+| C:\Windows\System32\pscript.sep  |    2 |    2 |   0 |    0 |    0 |     0 |
+| C:\Windows\Sys...eryprovider.mof |    0 |   61 |   0 | 2073 |    0 |     1 |
++----------------------------------+------+------+-----+------+------+-------+
+```
+
 ## Wikipedia
 
 * [Newline](https://en.wikipedia.org/wiki/Newline#Representation) - `CRLF` vs `LF`
 * [Tab key](https://en.wikipedia.org/wiki/Tab_key#Tab_characters)
 * [Null character](https://en.wikipedia.org/wiki/Null_character)
 * [Byte order mark](https://en.wikipedia.org/wiki/Byte_order_mark) - `BOM-8` vs `BOM-16`
+
+## Acknowledgments
+
+* [ellipsis](https://github.com/jftuga/ellipsis) - Go module to insert an ellipsis into the middle of a long string to shorten it
+* [tablewriter](https://github.com/olekukonko/tablewriter) - ASCII table in golang
