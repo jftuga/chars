@@ -15,16 +15,18 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"unicode/utf8"
 
+	"github.com/jftuga/ellipsis"
 	"github.com/olekukonko/tablewriter"
 )
 
 const pgmName string = "chars"
 const pgmDesc string = "Determine the end-of-line format, tabs, bom, and nul"
 const pgmUrl string = "https://github.com/jftuga/chars"
-const pgmVersion string = "1.1.0"
+const pgmVersion string = "1.2.0"
 
 type FileStat struct {
 	filename string
@@ -145,32 +147,45 @@ func detect(filename string, data []byte) FileStat {
 }
 
 // output - display a text table with each filename and the number of special characters
-func output(allStats []FileStat) {
+func output(allStats []FileStat, maxLength int) {
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetHeader([]string{"filename", "crlf", "lf", "tab", "nul", "bom8", "bom16"})
+
+	var name string
 	for _, s := range allStats {
-		row := []string{s.filename, s.crlf, s.lf, s.tab, s.nul, s.bom8, s.bom16}
+		if maxLength == 0 {
+			name = s.filename
+		} else {
+			name = ellipsis.Shorten(s.filename, maxLength)
+		}
+		row := []string{name, s.crlf, s.lf, s.tab, s.nul, s.bom8, s.bom16}
 		table.Append(row)
 	}
 	table.Render()
 }
 
 // processGlob - process of files contained within a single cmd-line arg glob
-func processGlob(globArg string, allStats *[]FileStat, examineBinary bool) {
+func processGlob(globArg string, allStats *[]FileStat, examineBinary bool, excludeMatched *regexp.Regexp) {
 	globFiles, err1 := filepath.Glob(globArg)
 	if err1 != nil {
 		panic(err1)
 	}
 	for _, filename := range globFiles {
-		//fmt.Println(filename)
 		info, _ := os.Stat(filename)
 		if info.IsDir() {
+			//fmt.Printf("skipping directory: %s\n", filename)
 			continue
+		}
+		if excludeMatched != nil {
+			if excludeMatched.Match([]byte(filename)) {
+				//fmt.Printf("excluding file: %s\n", filename)
+				continue
+			}
 		}
 		data, err2 := getFile(filename)
 		if !examineBinary {
 			if !isText(data) {
-				//fmt.Printf("binary file: %s\n", filename)
+				//fmt.Printf("skipping binary file: %s\n", filename)
 				continue
 			}
 		}
@@ -178,6 +193,8 @@ func processGlob(globArg string, allStats *[]FileStat, examineBinary bool) {
 			fmt.Fprintf(os.Stderr, "Unable to process: %s\n", filename)
 			continue
 		}
+
+		//fmt.Println(filename)
 		stats := detect(filename, data)
 		*allStats = append(*allStats, stats)
 	}
@@ -185,6 +202,9 @@ func processGlob(globArg string, allStats *[]FileStat, examineBinary bool) {
 
 func main() {
 	argsBinary := flag.Bool("b", false, "examine binary files")
+	argsExclude := flag.String("e", "", "exclude based on regular expression; use .* instead of *")
+	argsMaxLength := flag.Int("l", 0, "shorten files names to a maximum of the length")
+
 	flag.Usage = usage
 	flag.Parse()
 	allGlobs := flag.Args()
@@ -193,10 +213,20 @@ func main() {
 		return
 	}
 
-	var allStats []FileStat
-	for _, globArg := range allGlobs {
-		processGlob(globArg, &allStats, *argsBinary)
+	var err error
+	var excludeMatched *regexp.Regexp
+	if len(*argsExclude) > 0 {
+		excludeMatched, err = regexp.Compile(*argsExclude)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Invalid 'exclude' regular expression: %s\n", *argsExclude)
+			os.Exit(3)
+		}
 	}
 
-	output(allStats)
+	var allStats []FileStat
+	for _, globArg := range allGlobs {
+		processGlob(globArg, &allStats, *argsBinary, excludeMatched)
+	}
+
+	output(allStats, *argsMaxLength)
 }
