@@ -1,0 +1,59 @@
+project_name: chars
+build:
+  env:
+    - CGO_ENABLE=0
+  goos:
+    - linux
+    - freebsd
+    - windows
+    - darwin
+  goarch:
+    - amd64
+    - arm
+    - arm64
+    - mipsle
+  goarm:
+    - 7
+  ignore:
+    - goos: darwin
+      goarch: 386
+    - goos: linux
+      goarch: 386
+    - goos: freebsd
+      goarch: arm
+    - goos: freebsd
+      goarch: arm64
+    - goos: windows
+      goarch: arm64
+    - goos: windows
+      goarch: arm
+      goarm: 7
+
+archives:
+  -
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}{{ if .Mips }}_{{ .Mips }}{{ end }}"
+    format: tar.xz
+    format_overrides:
+      - goos: windows
+        format: zip
+    replacements:
+      darwin: MacOS
+      linux: Linux
+      freebsd: FreeBSD
+      windows: Windows
+      amd64: x86_64
+    wrap_in_directory: true
+    files:
+      - LICENSE
+      - README.md
+      
+checksum:
+  name_template: "{{ .ProjectName }}_{{ .Version }}--checksums.txt"
+release:
+  draft: true
+changelog:
+  sort: asc
+  filters:
+    exclude:
+    - '^docs:'
+    - '^test:'
