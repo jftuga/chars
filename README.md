@@ -9,7 +9,7 @@ Binaries for Windows, MacOS, Linux and FreeBSD are provided on the
 ## Usage
 
 ```shell
-chars v1.2.0
+chars v1.2.1
 Determine the end-of-line format, tabs, bom, and nul
 https://github.com/jftuga/chars
 
