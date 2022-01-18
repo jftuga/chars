@@ -7,11 +7,13 @@ Determine the end-of-line format, tabs, bom, and nul
 Pass wildcard filename globs on the command line
 */
 
-package main
+package chars
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -25,20 +27,20 @@ import (
 const pgmName string = "chars"
 const pgmDesc string = "Determine the end-of-line format, tabs, bom, and nul"
 const pgmUrl string = "https://github.com/jftuga/chars"
-const pgmVersion string = "1.2.1"
+const pgmVersion string = "1.3.0"
 
 type FileStat struct {
-	filename string
-	crlf     int
-	lf       int
-	tab      int
-	bom8     int
-	bom16    int
-	nul      int
+	Filename string `json:"filename"`
+	Crlf     int    `json:"crlf"`
+	Lf       int    `json:"lf"`
+	Tab      int    `json:"tab"`
+	Bom8     int    `json:"bom8"`
+	Bom16    int    `json:"bom16"`
+	Nul      int    `json:"nul"`
 }
 
-// usage - display help when no cmd-line args given
-func usage() {
+// Usage - display help when no cmd-line args given
+func Usage() {
 	fmt.Fprintf(os.Stderr, "\n")
 	fmt.Fprintf(os.Stderr, "%s v%s\n", pgmName, pgmVersion)
 	fmt.Fprintln(os.Stderr, pgmDesc)
@@ -119,29 +121,39 @@ func detect(filename string, data []byte) FileStat {
 		}
 	}
 
-	return FileStat{filename: filename, crlf: crlf, lf: lf, tab: tab, bom8: bom8, bom16: bom16, nul: nul}
+	return FileStat{Filename: filename, Crlf: crlf, Lf: lf, Tab: tab, Bom8: bom8, Bom16: bom16, Nul: nul}
 }
 
-// output - display a text table with each filename and the number of special characters
-func output(allStats []FileStat, maxLength int) {
+// OutputTextTable - display a text table with each filename and the number of special characters
+func OutputTextTable(allStats []FileStat, maxLength int) {
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetHeader([]string{"filename", "crlf", "lf", "tab", "nul", "bom8", "bom16"})
 
 	var name string
 	for _, s := range allStats {
 		if maxLength == 0 {
-			name = s.filename
+			name = s.Filename
 		} else {
-			name = ellipsis.Shorten(s.filename, maxLength)
+			name = ellipsis.Shorten(s.Filename, maxLength)
 		}
-		row := []string{name, strconv.Itoa(s.crlf), strconv.Itoa(s.lf), strconv.Itoa(s.tab), strconv.Itoa(s.nul), strconv.Itoa(s.bom8), strconv.Itoa(s.bom16)}
+		row := []string{name, strconv.Itoa(s.Crlf), strconv.Itoa(s.Lf), strconv.Itoa(s.Tab), strconv.Itoa(s.Nul), strconv.Itoa(s.Bom8), strconv.Itoa(s.Bom16)}
 		table.Append(row)
 	}
 	table.Render()
 }
 
-// processGlob - process of files contained within a single cmd-line arg glob
-func processGlob(globArg string, allStats *[]FileStat, examineBinary bool, excludeMatched *regexp.Regexp) {
+// GetJSON - return results JSON format
+func GetJSON(allStats []FileStat) string {
+	j, err := json.MarshalIndent(allStats, "", "    ")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return string(j)
+}
+
+// ProcessGlob - process of files contained within a single cmd-line arg glob
+func ProcessGlob(globArg string, allStats *[]FileStat, examineBinary bool, excludeMatched *regexp.Regexp) {
 	globFiles, err1 := filepath.Glob(globArg)
 	if err1 != nil {
 		panic(err1)
@@ -174,35 +186,4 @@ func processGlob(globArg string, allStats *[]FileStat, examineBinary bool, exclu
 		stats := detect(filename, data)
 		*allStats = append(*allStats, stats)
 	}
-}
-
-func main() {
-	argsBinary := flag.Bool("b", false, "examine binary files")
-	argsExclude := flag.String("e", "", "exclude based on regular expression; use .* instead of *")
-	argsMaxLength := flag.Int("l", 0, "shorten files names to a maximum of the length")
-
-	flag.Usage = usage
-	flag.Parse()
-	allGlobs := flag.Args()
-	if len(allGlobs) == 0 {
-		usage()
-		return
-	}
-
-	var err error
-	var excludeMatched *regexp.Regexp
-	if len(*argsExclude) > 0 {
-		excludeMatched, err = regexp.Compile(*argsExclude)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Invalid 'exclude' regular expression: %s\n", *argsExclude)
-			os.Exit(3)
-		}
-	}
-
-	var allStats []FileStat
-	for _, globArg := range allGlobs {
-		processGlob(globArg, &allStats, *argsBinary, excludeMatched)
-	}
-
-	output(allStats, *argsMaxLength)
 }
