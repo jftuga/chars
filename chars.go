@@ -10,9 +10,11 @@ Pass wildcard filename globs on the command line
 package chars
 
 import (
+	"bufio"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -58,10 +60,10 @@ func Usage() {
 
 // isText - if 2% of the bytes the first 1024 bytes are non-printable,
 // then consider the file to be a binary file
-func isText(s []byte) bool {
+func isText(s []byte, n int) bool {
 	const max = 1024
-	if len(s) > max {
-		s = s[0:max]
+	if n < max {
+		s = s[0:n]
 	}
 
 	bin := 0
@@ -83,45 +85,88 @@ func isText(s []byte) bool {
 	return true
 }
 
-// detect - tabulate the total number of special characters
-// in the given []byte slice
-func detect(filename string, data []byte) FileStat {
-
-	var position, tab, lf, crlf, bom8, bom16, nul uint64
-	position = 0 // file position
-	tab = 0      // 9
-	lf = 0       // 10
-	crlf = 0     // 13
-	bom8 = 0     // 239,187,191
-	bom16 = 0    // 255,254
-	nul = 0      // 0
-	for i, b := range data {
-		if b == 10 {
-			lf += 1
-		} else if b == 9 {
-			tab += 1
-		} else if b == 0 {
-			nul += 1
-		}
-		if position >= 1 {
-			if b == 10 && data[i-1] == 13 {
-				crlf += 1
-			}
-		}
-		position += 1
-	}
+// detectBOM - determine byte order mark (if any)
+func detectBOM(data []byte) (uint64, uint64) {
+	var bom8, bom16 uint64
 
 	if len(data) >= 3 {
 		if data[0] == 239 && data[1] == 187 && data[2] == 191 {
 			bom8 += 1
-		} else if data[0] == 255 && data[1] == 254 {
+		}
+	} else if len(data) >= 2 {
+		if data[0] == 255 && data[1] == 254 {
 			bom16 += 1 // little-endian
 		} else if data[0] == 254 && data[1] == 255 {
 			bom16 += 1 // big-endian
 		}
 	}
 
-	return FileStat{Filename: filename, Crlf: crlf, Lf: lf, Tab: tab, Bom8: bom8, Bom16: bom16, Nul: nul}
+	return bom8, bom16
+}
+
+// detect - tabulate the total number of special characters
+// in the given []byte slice
+func detect(filename string, examineBinary bool) (FileStat, error) {
+	var tab, lf, crlf, nul uint64
+	var prev byte
+
+	file, err := os.Open(filename)
+	if err != nil {
+		fmt.Println(err)
+		return FileStat{}, fmt.Errorf("warning: unable to open file: %s", filename)
+	}
+	defer file.Close()
+
+	data := make([]byte, 1024)
+	bytesRead, err := file.Read(data)
+	if err != nil {
+		return FileStat{}, fmt.Errorf("%s\nunable to read beginning of file: %s", err, filename)
+	}
+
+	// check binary files?
+	if !examineBinary {
+		if !isText(data, bytesRead) {
+			return FileStat{}, fmt.Errorf("skipping unwanted binary file: %s", filename)
+		}
+	}
+
+	// file starts with BOM?
+	bom8, bom16 := detectBOM(data)
+
+	// reset stream pointer to beginning of file
+	offset, err := file.Seek(0, 0)
+	if offset != 0 || err != nil {
+		return FileStat{}, fmt.Errorf("%s\nunable to seek on file: %s", err, filename)
+	}
+
+	// incrementally read file in chunks as to not consume too much memory; search for special chars
+	buf := bufio.NewReader(file)
+	for {
+		b, err := buf.ReadByte()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return FileStat{}, err
+		}
+
+		switch b {
+		case 0:
+			nul++
+		case '\t':
+			tab++
+		case '\n':
+			if prev == '\r' {
+				crlf++
+			} else {
+				lf++
+			}
+		}
+
+		prev = b
+	}
+
+	return FileStat{Filename: filename, Crlf: crlf, Lf: lf, Tab: tab, Bom8: bom8, Bom16: bom16, Nul: nul}, nil
 }
 
 // OutputTextTable - display a text table with each filename and the number of special characters
@@ -166,29 +211,22 @@ func ProcessFileList(globFiles []string, allStats *[]FileStat, examineBinary boo
 	for _, filename := range globFiles {
 		info, _ := os.Stat(filename)
 		if info.IsDir() {
-			// fmt.Printf("skipping directory: %s\n", filename)
+			// fmt.Println("skipping directory:", filename)
 			continue
 		}
 		if excludeMatched != nil {
 			if excludeMatched.Match([]byte(filename)) {
-				// fmt.Printf("excluding file: %s\n", filename)
+				// fmt.Println("excluding file:", filename)
 				continue
 			}
-		}
-		data, err2 := os.ReadFile(filename)
-		if !examineBinary {
-			if !isText(data) {
-				// fmt.Printf("skipping binary file: %s\n", filename)
-				continue
-			}
-		}
-		if err2 != nil {
-			fmt.Fprintf(os.Stderr, "Unable to process: %s\n", filename)
-			continue
 		}
 
-		// fmt.Println(filename)
-		stats := detect(filename, data)
+		// fmt.Println("checking file:", filename)
+		stats, err := detect(filename, examineBinary)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%s\n", err)
+			continue
+		}
 		*allStats = append(*allStats, stats)
 	}
 }
