@@ -59,7 +59,7 @@ func Usage() {
 // isText - if 2% of the bytes the first 1024 bytes are non-printable,
 // then consider the file to be a binary file
 func isText(s []byte) bool {
-	const max = 1024 // at least utf8.UTFMax
+	const max = 1024
 	if len(s) > max {
 		s = s[0:max]
 	}
@@ -67,20 +67,17 @@ func isText(s []byte) bool {
 	bin := 0
 	for i, c := range string(s) {
 		if i <= 3 {
-			// skip bom characters
-			continue
+			continue // skip bom characters
 		}
 		if i+utf8.UTFMax > len(s) {
-			// last char may be incomplete - ignore
-			break
+			break // last char may be incomplete - ignore
 		}
 		if c == 0xFFFD || c < ' ' && c != '\n' && c != '\t' && c != '\f' && c != '\r' && c != 0x00 {
-			// decoding error or control character - not a text file
 			bin += 1
 		}
 	}
-	numerator := float32(bin) / float32(len(s))
-	if numerator > 0.02 {
+	amount := float32(bin) / float32(len(s))
+	if amount >= 0.02 {
 		return false
 	}
 	return true
