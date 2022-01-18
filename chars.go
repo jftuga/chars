@@ -31,12 +31,12 @@ const pgmVersion string = "1.3.0"
 
 type FileStat struct {
 	Filename string `json:"filename"`
-	Crlf     int    `json:"crlf"`
-	Lf       int    `json:"lf"`
-	Tab      int    `json:"tab"`
-	Bom8     int    `json:"bom8"`
-	Bom16    int    `json:"bom16"`
-	Nul      int    `json:"nul"`
+	Crlf     uint64 `json:"crlf"`
+	Lf       uint64 `json:"lf"`
+	Tab      uint64 `json:"tab"`
+	Bom8     uint64 `json:"bom8"`
+	Bom16    uint64 `json:"bom16"`
+	Nul      uint64 `json:"nul"`
 }
 
 // Usage - display help when no cmd-line args given
@@ -86,13 +86,15 @@ func isText(s []byte) bool {
 // detect - tabulate the total number of special characters
 // in the given []byte slice
 func detect(filename string, data []byte) FileStat {
-	position := 0 // file position
-	tab := 0      // 9
-	lf := 0       // 10
-	crlf := 0     // 13
-	bom8 := 0     // 239,187,191
-	bom16 := 0    // 255,254
-	nul := 0      // 0
+
+	var position, tab, lf, crlf, bom8, bom16, nul uint64
+	position = 0 // file position
+	tab = 0      // 9
+	lf = 0       // 10
+	crlf = 0     // 13
+	bom8 = 0     // 239,187,191
+	bom16 = 0    // 255,254
+	nul = 0      // 0
 	for i, b := range data {
 		if b == 10 {
 			lf += 1
@@ -134,7 +136,7 @@ func OutputTextTable(allStats []FileStat, maxLength int) {
 		} else {
 			name = ellipsis.Shorten(s.Filename, maxLength)
 		}
-		row := []string{name, strconv.Itoa(s.Crlf), strconv.Itoa(s.Lf), strconv.Itoa(s.Tab), strconv.Itoa(s.Nul), strconv.Itoa(s.Bom8), strconv.Itoa(s.Bom16)}
+		row := []string{name, strconv.FormatUint(s.Crlf, 10), strconv.FormatUint(s.Lf, 10), strconv.FormatUint(s.Tab, 10), strconv.FormatUint(s.Nul, 10), strconv.FormatUint(s.Bom8, 10), strconv.FormatUint(s.Bom16, 10)}
 		table.Append(row)
 	}
 	table.Render()
