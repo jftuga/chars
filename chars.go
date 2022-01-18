@@ -51,6 +51,7 @@ func Usage() {
 	flag.PrintDefaults()
 	fmt.Fprintf(os.Stderr, "\n")
 	fmt.Fprintln(os.Stderr, "Notes:")
+	fmt.Fprintln(os.Stderr, "Use - to read filenames from STDIN")
 	fmt.Fprintf(os.Stderr, "Also try: %s *  -or-  %s */*  -or-  %s */*/*\n", pgmName, pgmName, pgmName)
 	fmt.Fprintf(os.Stderr, "\n")
 }
@@ -158,6 +159,11 @@ func ProcessGlob(globArg string, allStats *[]FileStat, examineBinary bool, exclu
 	if err1 != nil {
 		panic(err1)
 	}
+	ProcessFileList(globFiles, allStats, examineBinary, excludeMatched)
+}
+
+// ProcessFileList - process a list of filenames
+func ProcessFileList(globFiles []string, allStats *[]FileStat, examineBinary bool, excludeMatched *regexp.Regexp) {
 	for _, filename := range globFiles {
 		info, _ := os.Stat(filename)
 		if info.IsDir() {

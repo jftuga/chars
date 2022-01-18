@@ -10,12 +10,24 @@ Pass wildcard filename globs on the command line
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
 	"github.com/jftuga/chars"
 	"os"
 	"regexp"
 )
+
+func getFileListFromStdIn() []string {
+	var input *bufio.Scanner
+	input = bufio.NewScanner(os.Stdin)
+
+	var allFilenames []string
+	for input.Scan() {
+		allFilenames = append(allFilenames, input.Text())
+	}
+	return allFilenames
+}
 
 func main() {
 	argsBinary := flag.Bool("b", false, "examine binary files")
@@ -28,7 +40,12 @@ func main() {
 	allGlobs := flag.Args()
 	if len(allGlobs) == 0 {
 		chars.Usage()
-		return
+		os.Exit(1)
+	}
+
+	if *argsMaxLength > 0 && *argsJSON {
+		fmt.Fprintf(os.Stderr, "-l and -j are mutually exclusive")
+		os.Exit(2)
 	}
 
 	var err error
@@ -43,7 +60,12 @@ func main() {
 
 	var allStats []chars.FileStat
 	for _, globArg := range allGlobs {
-		chars.ProcessGlob(globArg, &allStats, *argsBinary, excludeMatched)
+		if globArg == "-" {
+			allFiles := getFileListFromStdIn()
+			chars.ProcessFileList(allFiles, &allStats, *argsBinary, excludeMatched)
+		} else {
+			chars.ProcessGlob(globArg, &allStats, *argsBinary, excludeMatched)
+		}
 	}
 
 	if *argsJSON {
