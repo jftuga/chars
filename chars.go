@@ -31,7 +31,7 @@ const pgmDesc string = "Determine the end-of-line format, tabs, bom, and nul"
 const pgmUrl string = "https://github.com/jftuga/chars"
 const pgmVersion string = "1.3.0"
 
-type FileStat struct {
+type SpecialChars struct {
 	Filename string `json:"filename"`
 	Crlf     uint64 `json:"crlf"`
 	Lf       uint64 `json:"lf"`
@@ -106,27 +106,27 @@ func detectBOM(data []byte) (uint64, uint64) {
 
 // detect - tabulate the total number of special characters
 // in the given []byte slice
-func detect(filename string, examineBinary bool) (FileStat, error) {
+func detect(filename string, examineBinary bool) (SpecialChars, error) {
 	var tab, lf, crlf, nul uint64
 	var prev byte
 
 	file, err := os.Open(filename)
 	if err != nil {
 		fmt.Println(err)
-		return FileStat{}, fmt.Errorf("warning: unable to open file: %s", filename)
+		return SpecialChars{}, fmt.Errorf("warning: unable to open file: %s", filename)
 	}
 	defer file.Close()
 
 	data := make([]byte, 1024)
 	bytesRead, err := file.Read(data)
 	if err != nil {
-		return FileStat{}, fmt.Errorf("%s\nunable to read beginning of file: %s", err, filename)
+		return SpecialChars{}, fmt.Errorf("%s\nunable to read beginning of file: %s", err, filename)
 	}
 
 	// check binary files?
 	if !examineBinary {
 		if !isText(data, bytesRead) {
-			return FileStat{}, fmt.Errorf("skipping unwanted binary file: %s", filename)
+			return SpecialChars{}, fmt.Errorf("skipping unwanted binary file: %s", filename)
 		}
 	}
 
@@ -136,7 +136,7 @@ func detect(filename string, examineBinary bool) (FileStat, error) {
 	// reset stream pointer to beginning of file
 	offset, err := file.Seek(0, 0)
 	if offset != 0 || err != nil {
-		return FileStat{}, fmt.Errorf("%s\nunable to seek on file: %s", err, filename)
+		return SpecialChars{}, fmt.Errorf("%s\nunable to seek on file: %s", err, filename)
 	}
 
 	// incrementally read file in chunks as to not consume too much memory; search for special chars
@@ -147,7 +147,7 @@ func detect(filename string, examineBinary bool) (FileStat, error) {
 			if err == io.EOF {
 				break
 			}
-			return FileStat{}, err
+			return SpecialChars{}, err
 		}
 
 		switch b {
@@ -166,11 +166,11 @@ func detect(filename string, examineBinary bool) (FileStat, error) {
 		prev = b
 	}
 
-	return FileStat{Filename: filename, Crlf: crlf, Lf: lf, Tab: tab, Bom8: bom8, Bom16: bom16, Nul: nul}, nil
+	return SpecialChars{Filename: filename, Crlf: crlf, Lf: lf, Tab: tab, Bom8: bom8, Bom16: bom16, Nul: nul}, nil
 }
 
 // OutputTextTable - display a text table with each filename and the number of special characters
-func OutputTextTable(allStats []FileStat, maxLength int) {
+func OutputTextTable(allStats []SpecialChars, maxLength int) {
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetHeader([]string{"filename", "crlf", "lf", "tab", "nul", "bom8", "bom16"})
 
@@ -188,7 +188,7 @@ func OutputTextTable(allStats []FileStat, maxLength int) {
 }
 
 // GetJSON - return results JSON format
-func GetJSON(allStats []FileStat) string {
+func GetJSON(allStats []SpecialChars) string {
 	j, err := json.MarshalIndent(allStats, "", "    ")
 	if err != nil {
 		log.Fatal(err)
@@ -198,7 +198,7 @@ func GetJSON(allStats []FileStat) string {
 }
 
 // ProcessGlob - process of files contained within a single cmd-line arg glob
-func ProcessGlob(globArg string, allStats *[]FileStat, examineBinary bool, excludeMatched *regexp.Regexp) {
+func ProcessGlob(globArg string, allStats *[]SpecialChars, examineBinary bool, excludeMatched *regexp.Regexp) {
 	globFiles, err1 := filepath.Glob(globArg)
 	if err1 != nil {
 		panic(err1)
@@ -207,7 +207,7 @@ func ProcessGlob(globArg string, allStats *[]FileStat, examineBinary bool, exclu
 }
 
 // ProcessFileList - process a list of filenames
-func ProcessFileList(globFiles []string, allStats *[]FileStat, examineBinary bool, excludeMatched *regexp.Regexp) {
+func ProcessFileList(globFiles []string, allStats *[]SpecialChars, examineBinary bool, excludeMatched *regexp.Regexp) {
 	for _, filename := range globFiles {
 		info, _ := os.Stat(filename)
 		if info.IsDir() {
