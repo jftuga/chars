@@ -1,5 +1,7 @@
 project_name: chars
 build:
+  binary: chars
+  dir: ./cmd/chars
   env:
     - CGO_ENABLE=0
   goos:
