@@ -1,10 +1,10 @@
 /*
-chars
+chars CLI interface
 -John Taylor
 Jan-16-2022
 
-Determine the end-of-line format, tabs, bom, and nul
-Pass wildcard filename globs on the command line
+Determine the end-of-line format, tabs, bom, and nul characters
+https://github.com/jftuga/chars
 */
 
 package main
@@ -60,10 +60,12 @@ func main() {
 		}
 	}
 
+	// no cmd-line filenames were passed, so read from STDIN
 	if len(allGlobs) == 0 {
 		allGlobs = []string{"-"}
 	}
 
+	// allStats will be modified in-place by one of the two functions below
 	var allStats []chars.SpecialChars
 	for _, fileSelection := range allGlobs {
 		if fileSelection == "-" {
@@ -73,6 +75,7 @@ func main() {
 		}
 	}
 
+	// output results to either JSON or text table
 	if *argsJSON {
 		_, err := fmt.Println(chars.GetJSON(allStats))
 		if err != nil {
