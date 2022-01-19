@@ -10,7 +10,6 @@ Pass wildcard filename globs on the command line
 package main
 
 import (
-	"bufio"
 	"flag"
 	"fmt"
 	"github.com/jftuga/chars"
@@ -18,30 +17,33 @@ import (
 	"regexp"
 )
 
-func getFileListFromStdIn() []string {
-	var input *bufio.Scanner
-	input = bufio.NewScanner(os.Stdin)
-
-	var allFilenames []string
-	for input.Scan() {
-		allFilenames = append(allFilenames, input.Text())
-	}
-	return allFilenames
+// Usage - display help when no cmd-line args given
+func Usage() {
+	fmt.Fprintf(os.Stderr, "\n")
+	fmt.Fprintf(os.Stderr, "%s v%s\n", chars.PgmName, chars.PgmVersion)
+	fmt.Fprintln(os.Stderr, chars.PgmDesc)
+	fmt.Fprintln(os.Stderr, chars.PgmUrl)
+	fmt.Fprintf(os.Stderr, "\n")
+	fmt.Fprintln(os.Stderr, "Usage:")
+	fmt.Fprintf(os.Stderr, "%s [filename or file-glob 1] [filename or file-glob 2] ...\n", chars.PgmName)
+	flag.PrintDefaults()
+	fmt.Fprintf(os.Stderr, "\n")
+	fmt.Fprintln(os.Stderr, "Notes:")
+	fmt.Fprintln(os.Stderr, "Use - to read a file from STDIN")
+	fmt.Fprintf(os.Stderr, "On Windows, try: %s *  -or-  %s */*  -or-  %s */*/*\n", chars.PgmName, chars.PgmName, chars.PgmName)
+	fmt.Fprintf(os.Stderr, "\n")
 }
 
+// main - process cmd-line args; process files given on cmd-line or process file read from STDIN
 func main() {
 	argsBinary := flag.Bool("b", false, "examine binary files")
 	argsExclude := flag.String("e", "", "exclude based on regular expression; use .* instead of *")
-	argsMaxLength := flag.Int("l", 0, "shorten files names to a maximum of the length")
-	argsJSON := flag.Bool("j", false, "output results in JSON format")
+	argsMaxLength := flag.Int("l", 0, "shorten files names to a maximum of this length")
+	argsJSON := flag.Bool("j", false, "output results in JSON format; can't be used with -l")
 
-	flag.Usage = chars.Usage
+	flag.Usage = Usage
 	flag.Parse()
 	allGlobs := flag.Args()
-	if len(allGlobs) == 0 {
-		chars.Usage()
-		os.Exit(1)
-	}
 
 	if *argsMaxLength > 0 && *argsJSON {
 		fmt.Fprintf(os.Stderr, "-l and -j are mutually exclusive")
@@ -49,27 +51,33 @@ func main() {
 	}
 
 	var err error
-	var excludeMatched *regexp.Regexp
+	var excludeFiles *regexp.Regexp
 	if len(*argsExclude) > 0 {
-		excludeMatched, err = regexp.Compile(*argsExclude)
+		excludeFiles, err = regexp.Compile(*argsExclude)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Invalid 'exclude' regular expression: %s\n", *argsExclude)
 			os.Exit(3)
 		}
 	}
 
-	var allStats []chars.FileStat
-	for _, globArg := range allGlobs {
-		if globArg == "-" {
-			allFiles := getFileListFromStdIn()
-			chars.ProcessFileList(allFiles, &allStats, *argsBinary, excludeMatched)
+	if len(allGlobs) == 0 {
+		allGlobs = []string{"-"}
+	}
+
+	var allStats []chars.SpecialChars
+	for _, fileSelection := range allGlobs {
+		if fileSelection == "-" {
+			chars.ProcessStdin(&allStats, *argsBinary, excludeFiles)
 		} else {
-			chars.ProcessGlob(globArg, &allStats, *argsBinary, excludeMatched)
+			chars.ProcessGlob(fileSelection, &allStats, *argsBinary, excludeFiles)
 		}
 	}
 
 	if *argsJSON {
-		fmt.Println(chars.GetJSON(allStats))
+		_, err := fmt.Println(chars.GetJSON(allStats))
+		if err != nil {
+			os.Exit(4)
+		}
 	} else {
 		chars.OutputTextTable(allStats, *argsMaxLength)
 	}
