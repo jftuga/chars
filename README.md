@@ -1,28 +1,30 @@
 # chars
 Determine the end-of-line format, tabs, bom, and nul characters
 
-## Download
-
 Binaries for Windows, MacOS, Linux and FreeBSD are provided on the
 [releases page](https://github.com/jftuga/chars/releases).
 
 ## Usage
 
+* For help, run `chars -h`
+
 ```shell
-chars v1.2.1
+chars v2.0.0
 Determine the end-of-line format, tabs, bom, and nul
 https://github.com/jftuga/chars
 
 Usage:
-chars [file-glob 1] [file-glob 2] ...
+chars [filename or file-glob 1] [filename or file-glob 2] ...
   -b    examine binary files
   -e string
         exclude based on regular expression; use .* instead of *
+  -j    output results in JSON format; can't be used with -l
   -l int
-        shorten files names to a maximum of the length
+        shorten files names to a maximum of this length
 
 Notes:
-Also try: chars *  -or-  chars */*  -or-  chars */*/*
+Use - to read a file from STDIN
+On Windows, try: chars *  -or-  chars */*  -or-  chars */*/*
 ```
 
 ## Example 1
@@ -33,20 +35,17 @@ Also try: chars *  -or-  chars */*  -or-  chars */*/*
 
 ```shell
 PS C:\chars> .\chars.exe *
-
-+-----------------+------+------+------+--------+------+-------+
-|    FILENAME     | CRLF |  LF  | TAB  |  NUL   | BOM8 | BOM16 |
-+-----------------+------+------+------+--------+------+-------+
-| .gitignore      |    0 |   16 |    0 |      0 |    0 |     0 |
-| .goreleaser.yml |    0 |   59 |    0 |      0 |    0 |     0 |
-| LICENSE         |    0 |   21 |    0 |      0 |    0 |     0 |
-| README.md       |    0 |   23 |    0 |      0 |    0 |     0 |
-| cmd.go          |    0 |  148 |  148 |      0 |    0 |     0 |
-| go.mod          |    0 |    7 |    0 |      0 |    0 |     0 |
-| go.sum          |    0 |    4 |    0 |      0 |    0 |     0 |
-| testfile1       |   19 |   19 |    0 |      0 |    0 |     0 |
-| testfile2       |    0 |   21 |    0 |   2269 |    0 |     1 |
-+-----------------+------+------+------+--------+------+-------+
++-----------------+------+-----+-----+------+------+-------+-----------+
+|    FILENAME     | CRLF | LF  | TAB | NUL  | BOM8 | BOM16 | BYTESREAD |
++-----------------+------+-----+-----+------+------+-------+-----------+
+| .goreleaser.yml |    0 |  59 |   0 |    0 |    0 |     0 |      1066 |
+| LICENSE         |    0 |  21 |   0 |    0 |    0 |     0 |      1068 |
+| README.md       |    0 |  92 |   0 |    0 |    0 |     0 |      3510 |
+| chars.go        |    0 | 246 | 328 |    0 |    0 |     0 |      6477 |
+| go.mod          |    0 |  10 |   2 |    0 |    0 |     0 |       188 |
+| go.sum          |    0 |   6 |   0 |    0 |    0 |     0 |       533 |
+| testfile1       |    0 |  22 |   0 | 3223 |    0 |     1 |      6448 |
++-----------------+------+-----+-----+------+------+-------+-----------+
 ```
 
 ## Example 2
@@ -58,17 +57,37 @@ PS C:\chars> .\chars.exe *
 
 ```shell
 PS C:\chars> .\chars.exe -e perf.*dat -l 32 C:\Windows\System32\p*
-
-+----------------------------------+------+------+-----+------+------+-------+
-|             FILENAME             | CRLF |  LF  | TAB | NUL  | BOM8 | BOM16 |
-+----------------------------------+------+------+-----+------+------+-------+
-| C:\Windows\System32\pcl.sep      |   11 |   11 |   0 |    0 |    0 |     0 |
-| C:\Windows\System32\perfmon.msc  | 1933 | 1933 |   0 |    0 |    0 |     0 |
-| C:\Windows\Sys...tmanagement.msc | 1945 | 1945 |   0 |    0 |    0 |     0 |
-| C:\Windows\System32\pscript.sep  |    2 |    2 |   0 |    0 |    0 |     0 |
-| C:\Windows\Sys...eryprovider.mof |    0 |   61 |   0 | 2073 |    0 |     1 |
-+----------------------------------+------+------+-----+------+------+-------+
++----------------------------------+------+----+-----+------+------+-------+-----------+
+|             FILENAME             | CRLF | LF | TAB | NUL  | BOM8 | BOM16 | BYTESREAD |
++----------------------------------+------+----+-----+------+------+-------+-----------+
+| C:\Windows\System32\pcl.sep      |   11 |  0 |   0 |    0 |    0 |     0 |       150 |
+| C:\Windows\System32\perfmon.msc  | 1933 |  0 |   0 |    0 |    0 |     0 |    145519 |
+| C:\Windows\Sys...tmanagement.msc | 1945 |  0 |   0 |    0 |    0 |     0 |    146389 |
+| C:\Windows\System32\pscript.sep  |    2 |  0 |   0 |    0 |    0 |     0 |        51 |
+| C:\Windows\Sys...eryprovider.mof |    0 | 61 |   0 | 2073 |    0 |     1 |      4148 |
++----------------------------------+------+----+-----+------+------+-------+-----------+
 ```
+
+## Example 3
+
+* Pipe STDIN to `chars`
+
+```shell
+$ curl -s https://example.com/ | chars
++----------+------+----+-----+-----+------+-------+-----------+
+| FILENAME | CRLF | LF | TAB | NUL | BOM8 | BOM16 | BYTESREAD |
++----------+------+----+-----+-----+------+-------+-----------+
+| STDIN    |    0 | 46 |   0 |   0 |    0 |     0 |      1256 |
++----------+------+----+-----+-----+------+-------+-----------+
+```
+
+## Reading from STDIN on Windows
+* **YMMV when piping to `STDIN` under Windows**
+* `cmd` and `powershell` will skip `BOM` characters; these 2 fields will both report a value of `0`
+* `cmd` and `powershell` will skip `NUL` characters; this field report a value of `0`
+* `cmd` will convert `LF` to `CRLF` for `UTF-16` encoded files
+* `powershell` will convert `LF` to `CRLF`
+* Piping from programs such as `curl` will return `LF` characters under `cmd`, but `CRLF` under `powershell`
 
 ## Wikipedia
 
@@ -81,3 +100,4 @@ PS C:\chars> .\chars.exe -e perf.*dat -l 32 C:\Windows\System32\p*
 
 * [ellipsis](https://github.com/jftuga/ellipsis) - Go module to insert an ellipsis into the middle of a long string to shorten it
 * [tablewriter](https://github.com/olekukonko/tablewriter) - ASCII table in golang
+* [/u/skeeto](https://old.reddit.com/user/skeeto) and [/u/petreus](https://old.reddit.com/user/ppetreus) provided [code review and suggestions](https://www.reddit.com/r/golang/comments/s64jye/i_wrote_a_cli_tool_to_determine_the_endofline/) 
