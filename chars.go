@@ -1,5 +1,5 @@
 /*
-chars
+chars.go
 -John Taylor
 Jan-16-2022
 
@@ -12,7 +12,6 @@ package chars
 import (
 	"bufio"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -26,43 +25,32 @@ import (
 	"github.com/olekukonko/tablewriter"
 )
 
-const pgmName string = "chars"
-const pgmDesc string = "Determine the end-of-line format, tabs, bom, and nul"
-const pgmUrl string = "https://github.com/jftuga/chars"
-const pgmVersion string = "1.3.0"
+const PgmName string = "chars"
+const PgmDesc string = "Determine the end-of-line format, tabs, bom, and nul"
+const PgmUrl string = "https://github.com/jftuga/chars"
+const PgmVersion string = "2.0.0"
+const firstBlockSize int = 1024
 
 type SpecialChars struct {
-	Filename string `json:"filename"`
-	Crlf     uint64 `json:"crlf"`
-	Lf       uint64 `json:"lf"`
-	Tab      uint64 `json:"tab"`
-	Bom8     uint64 `json:"bom8"`
-	Bom16    uint64 `json:"bom16"`
-	Nul      uint64 `json:"nul"`
+	Filename  string `json:"filename"`
+	Crlf      uint64 `json:"crlf"`
+	Lf        uint64 `json:"lf"`
+	Tab       uint64 `json:"tab"`
+	Bom8      uint64 `json:"bom8"`
+	Bom16     uint64 `json:"bom16"`
+	Nul       uint64 `json:"nul"`
+	BytesRead uint64 `json:"bytesRead"`
 }
 
-// Usage - display help when no cmd-line args given
-func Usage() {
-	fmt.Fprintf(os.Stderr, "\n")
-	fmt.Fprintf(os.Stderr, "%s v%s\n", pgmName, pgmVersion)
-	fmt.Fprintln(os.Stderr, pgmDesc)
-	fmt.Fprintln(os.Stderr, pgmUrl)
-	fmt.Fprintf(os.Stderr, "\n")
-	fmt.Fprintln(os.Stderr, "Usage:")
-	fmt.Fprintf(os.Stderr, "%s [file-glob 1] [file-glob 2] ...\n", pgmName)
-	flag.PrintDefaults()
-	fmt.Fprintf(os.Stderr, "\n")
-	fmt.Fprintln(os.Stderr, "Notes:")
-	fmt.Fprintln(os.Stderr, "Use - to read filenames from STDIN")
-	fmt.Fprintf(os.Stderr, "Also try: %s *  -or-  %s */*  -or-  %s */*/*\n", pgmName, pgmName, pgmName)
-	fmt.Fprintf(os.Stderr, "\n")
+type charsError struct {
+	code int
+	err  string
 }
 
-// isText - if 2% of the bytes the first 1024 bytes are non-printable,
-// then consider the file to be a binary file
+// isText - if 2% of the bytes are non-printable, consider the file to be binary
 func isText(s []byte, n int) bool {
-	const max = 1024
-	if n < max {
+	const binaryCutoff float32 = 0.02
+	if n < firstBlockSize {
 		s = s[0:n]
 	}
 
@@ -79,77 +67,68 @@ func isText(s []byte, n int) bool {
 		}
 	}
 	amount := float32(bin) / float32(len(s))
-	if amount >= 0.02 {
+	if amount >= binaryCutoff {
 		return false
 	}
 	return true
 }
 
-// detectBOM - determine byte order mark (if any)
-func detectBOM(data []byte) (uint64, uint64) {
+// DetectBOM - determine byte order mark (if any)
+// reference: https://en.wikipedia.org/wiki/Byte_order_mark
+func DetectBOM(data []byte) (uint64, uint64) {
 	var bom8, bom16 uint64
 
 	if len(data) >= 3 {
 		if data[0] == 239 && data[1] == 187 && data[2] == 191 {
 			bom8 += 1
-		}
-	} else if len(data) >= 2 {
-		if data[0] == 255 && data[1] == 254 {
-			bom16 += 1 // little-endian
-		} else if data[0] == 254 && data[1] == 255 {
-			bom16 += 1 // big-endian
+		} else if len(data) >= 2 {
+			if data[0] == 255 && data[1] == 254 {
+				bom16 += 1 // little-endian
+			} else if data[0] == 254 && data[1] == 255 {
+				bom16 += 1 // big-endian
+			}
 		}
 	}
-
 	return bom8, bom16
 }
 
-// detect - tabulate the total number of special characters
-// in the given []byte slice
-func detect(filename string, examineBinary bool) (SpecialChars, error) {
-	var tab, lf, crlf, nul uint64
+// searchForSpecialChars - search for special chars by incrementally reading in chunks as to not consume too much memory
+// use *bufio.Reader so that either a file or STDIN can be used
+func searchForSpecialChars(filename string, buf *bufio.Reader, examineBinary bool) (SpecialChars, charsError) {
+	var tab, lf, crlf, bom8, bom16, nul, bytesRead uint64
 	var prev byte
+	var firstBlock []byte
 
-	file, err := os.Open(filename)
-	if err != nil {
-		fmt.Println(err)
-		return SpecialChars{}, fmt.Errorf("warning: unable to open file: %s", filename)
-	}
-	defer file.Close()
-
-	data := make([]byte, 1024)
-	bytesRead, err := file.Read(data)
-	if err != nil {
-		return SpecialChars{}, fmt.Errorf("%s\nunable to read beginning of file: %s", err, filename)
-	}
-
-	// check binary files?
-	if !examineBinary {
-		if !isText(data, bytesRead) {
-			return SpecialChars{}, fmt.Errorf("skipping unwanted binary file: %s", filename)
-		}
-	}
-
-	// file starts with BOM?
-	bom8, bom16 := detectBOM(data)
-
-	// reset stream pointer to beginning of file
-	offset, err := file.Seek(0, 0)
-	if offset != 0 || err != nil {
-		return SpecialChars{}, fmt.Errorf("%s\nunable to seek on file: %s", err, filename)
-	}
-
-	// incrementally read file in chunks as to not consume too much memory; search for special chars
-	buf := bufio.NewReader(file)
+	i := 0
+	verifiedTextFile := false
 	for {
 		b, err := buf.ReadByte()
+
+		// return on end of file or if an i/o error occurs
 		if err != nil {
 			if err == io.EOF {
-				break
+
+				return SpecialChars{Filename: filename, Crlf: crlf, Lf: lf, Tab: tab, Bom8: bom8, Bom16: bom16, Nul: nul, BytesRead: bytesRead}, charsError{code: 0, err: ""}
 			}
-			return SpecialChars{}, err
+			return SpecialChars{}, charsError{code: 1, err: err.Error()}
 		}
 
+		// create a small block at beginning of stream so that it can be checked for a BOM or contains binary data
+		if i < firstBlockSize {
+			firstBlock = append(firstBlock, b)
+			i++
+		} else {
+			if !verifiedTextFile {
+				verifiedTextFile = true
+				bom8, bom16 = DetectBOM(firstBlock)
+				if !isText(firstBlock, i) && !examineBinary {
+					return SpecialChars{}, charsError{code: 2, err: fmt.Sprintf("skipping unwanted binary file: %s", filename)}
+				}
+			}
+		}
+
+		// iterate through each character, search for nul, tab, crlf and lf
+		bytesRead++
 		switch b {
 		case 0:
 			nul++
@@ -162,17 +141,19 @@ func detect(filename string, examineBinary bool) (SpecialChars, error) {
 				lf++
 			}
 		}
-
 		prev = b
 	}
-
-	return SpecialChars{Filename: filename, Crlf: crlf, Lf: lf, Tab: tab, Bom8: bom8, Bom16: bom16, Nul: nul}, nil
+	//bom8, bom16 := DetectBOM(firstBlock)
+	return SpecialChars{Filename: filename, Crlf: crlf, Lf: lf, Tab: tab, Bom8: bom8, Bom16: bom16, Nul: nul, BytesRead: bytesRead}, charsError{code: 0, err: ""}
 }
 
 // OutputTextTable - display a text table with each filename and the number of special characters
 func OutputTextTable(allStats []SpecialChars, maxLength int) {
+	if len(allStats) == 0 {
+		return
+	}
 	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"filename", "crlf", "lf", "tab", "nul", "bom8", "bom16"})
+	table.SetHeader([]string{"filename", "crlf", "lf", "tab", "nul", "bom8", "bom16", "bytesRead"})
 
 	var name string
 	for _, s := range allStats {
@@ -181,7 +162,9 @@ func OutputTextTable(allStats []SpecialChars, maxLength int) {
 		} else {
 			name = ellipsis.Shorten(s.Filename, maxLength)
 		}
-		row := []string{name, strconv.FormatUint(s.Crlf, 10), strconv.FormatUint(s.Lf, 10), strconv.FormatUint(s.Tab, 10), strconv.FormatUint(s.Nul, 10), strconv.FormatUint(s.Bom8, 10), strconv.FormatUint(s.Bom16, 10)}
+		row := []string{name, strconv.FormatUint(s.Crlf, 10), strconv.FormatUint(s.Lf, 10),
+			strconv.FormatUint(s.Tab, 10), strconv.FormatUint(s.Nul, 10), strconv.FormatUint(s.Bom8, 10),
+			strconv.FormatUint(s.Bom16, 10), strconv.FormatUint(s.BytesRead, 10)}
 		table.Append(row)
 	}
 	table.Render()
@@ -194,20 +177,26 @@ func GetJSON(allStats []SpecialChars) string {
 		log.Fatal(err)
 	}
 
+	if string(j) == "null" {
+		return ""
+	}
+
 	return string(j)
 }
 
 // ProcessGlob - process of files contained within a single cmd-line arg glob
 func ProcessGlob(globArg string, allStats *[]SpecialChars, examineBinary bool, excludeMatched *regexp.Regexp) {
-	globFiles, err1 := filepath.Glob(globArg)
-	if err1 != nil {
-		panic(err1)
+	globFiles, err := filepath.Glob(globArg)
+	if err != nil {
+		panic(err)
 	}
 	ProcessFileList(globFiles, allStats, examineBinary, excludeMatched)
 }
 
 // ProcessFileList - process a list of filenames
 func ProcessFileList(globFiles []string, allStats *[]SpecialChars, examineBinary bool, excludeMatched *regexp.Regexp) {
+	var file *os.File
+	var err error
 	for _, filename := range globFiles {
 		info, _ := os.Stat(filename)
 		if info.IsDir() {
@@ -222,11 +211,36 @@ func ProcessFileList(globFiles []string, allStats *[]SpecialChars, examineBinary
 		}
 
 		// fmt.Println("checking file:", filename)
-		stats, err := detect(filename, examineBinary)
+		file, err = os.Open(filename)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "%s\n", err)
+			fmt.Println(err)
+			continue
+		}
+
+		reader := bufio.NewReader(file)
+		stats, charsErr := searchForSpecialChars(filename, reader, examineBinary)
+		file.Close()
+		if charsErr.code == 1 {
+			// output error message except for an unwanted binary file
+			fmt.Fprintf(os.Stderr, "error #%d: %s\n", charsErr.code, charsErr.err)
+			continue
+		} else if charsErr.code != 0 {
 			continue
 		}
 		*allStats = append(*allStats, stats)
 	}
+}
+
+// ProcessStdin - process a list of filenames
+func ProcessStdin(allStats *[]SpecialChars, examineBinary bool, excludeMatched *regexp.Regexp) charsError {
+	var charsErr charsError
+
+	reader := bufio.NewReader(os.Stdin)
+	stats, charsErr := searchForSpecialChars("STDIN", reader, examineBinary)
+	if charsErr.code != 0 {
+		return charsErr
+	}
+
+	*allStats = append(*allStats, stats)
+	return charsErr
 }
