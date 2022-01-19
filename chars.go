@@ -28,8 +28,8 @@ import (
 const PgmName string = "chars"
 const PgmDesc string = "Determine the end-of-line format, tabs, bom, and nul"
 const PgmUrl string = "https://github.com/jftuga/chars"
-const PgmVersion string = "2.0.0"
-const firstBlockSize int = 1024
+const PgmVersion string = "2.0.1"
+const firstBlockSize uint64 = 1024
 
 type SpecialChars struct {
 	Filename  string `json:"filename"`
@@ -48,7 +48,7 @@ type charsError struct {
 }
 
 // isText - if 2% of the bytes are non-printable, consider the file to be binary
-func isText(s []byte, n int) bool {
+func isText(s []byte, n uint64) bool {
 	const binaryCutoff float32 = 0.02
 	if n < firstBlockSize {
 		s = s[0:n]
@@ -99,7 +99,6 @@ func searchForSpecialChars(filename string, buf *bufio.Reader, examineBinary boo
 	var prev byte
 	var firstBlock []byte
 
-	i := 0
 	verifiedTextFile := false
 	for {
 		b, err := buf.ReadByte()
@@ -107,28 +106,28 @@ func searchForSpecialChars(filename string, buf *bufio.Reader, examineBinary boo
 		// return on end of file or if an i/o error occurs
 		if err != nil {
 			if err == io.EOF {
-
 				return SpecialChars{Filename: filename, Crlf: crlf, Lf: lf, Tab: tab, Bom8: bom8, Bom16: bom16, Nul: nul, BytesRead: bytesRead}, charsError{code: 0, err: ""}
 			}
 			return SpecialChars{}, charsError{code: 1, err: err.Error()}
 		}
+		bytesRead++
 
 		// create a small block at beginning of stream so that it can be checked for a BOM or contains binary data
-		if i < firstBlockSize {
+		if bytesRead < firstBlockSize {
 			firstBlock = append(firstBlock, b)
-			i++
 		} else {
 			if !verifiedTextFile {
 				verifiedTextFile = true
 				bom8, bom16 = DetectBOM(firstBlock)
-				if !isText(firstBlock, i) && !examineBinary {
-					return SpecialChars{}, charsError{code: 2, err: fmt.Sprintf("skipping unwanted binary file: %s", filename)}
+				if !examineBinary {
+					if !isText(firstBlock, bytesRead) {
+						return SpecialChars{}, charsError{code: 2, err: fmt.Sprintf("skipping unwanted binary file: %s", filename)}
+					}
 				}
 			}
 		}
 
 		// iterate through each character, search for nul, tab, crlf and lf
-		bytesRead++
 		switch b {
 		case 0:
 			nul++
@@ -143,7 +142,6 @@ func searchForSpecialChars(filename string, buf *bufio.Reader, examineBinary boo
 		}
 		prev = b
 	}
-	//bom8, bom16 := DetectBOM(firstBlock)
 	return SpecialChars{Filename: filename, Crlf: crlf, Lf: lf, Tab: tab, Bom8: bom8, Bom16: bom16, Nul: nul, BytesRead: bytesRead}, charsError{code: 0, err: ""}
 }
 
@@ -184,7 +182,7 @@ func GetJSON(allStats []SpecialChars) string {
 	return string(j)
 }
 
-// ProcessGlob - process of files contained within a single cmd-line arg glob
+// ProcessGlob - process all files matching the file-glob
 func ProcessGlob(globArg string, allStats *[]SpecialChars, examineBinary bool, excludeMatched *regexp.Regexp) {
 	globFiles, err := filepath.Glob(globArg)
 	if err != nil {
@@ -231,7 +229,7 @@ func ProcessFileList(globFiles []string, allStats *[]SpecialChars, examineBinary
 	}
 }
 
-// ProcessStdin - process a list of filenames
+// ProcessStdin - read a file stream directly from STDIN
 func ProcessStdin(allStats *[]SpecialChars, examineBinary bool, excludeMatched *regexp.Regexp) charsError {
 	var charsErr charsError
 
