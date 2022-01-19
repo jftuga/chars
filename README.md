@@ -100,4 +100,4 @@ $ curl -s https://example.com/ | chars
 
 * [ellipsis](https://github.com/jftuga/ellipsis) - Go module to insert an ellipsis into the middle of a long string to shorten it
 * [tablewriter](https://github.com/olekukonko/tablewriter) - ASCII table in golang
-* [/u/skeeto](https://old.reddit.com/user/skeeto) and [/u/petreus](https://old.reddit.com/user/ppetreus) provided [code review and suggestions](https://www.reddit.com/r/golang/comments/s64jye/i_wrote_a_cli_tool_to_determine_the_endofline/) 
+* [/u/skeeto](https://old.reddit.com/user/skeeto) and [/u/petreus](https://old.reddit.com/user/ppetreus) provided [code review and suggestions](https://old.reddit.com/r/golang/comments/s64jye/i_wrote_a_cli_tool_to_determine_the_endofline/) 
