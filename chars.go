@@ -3,8 +3,8 @@ chars.go
 -John Taylor
 Jan-16-2022
 
-Determine the end-of-line format, tabs, bom, and nul
-Pass wildcard filename globs on the command line
+Determine the end-of-line format, tabs, bom, and nul characters
+https://github.com/jftuga/chars
 */
 
 package chars
@@ -142,7 +142,6 @@ func searchForSpecialChars(filename string, buf *bufio.Reader, examineBinary boo
 		}
 		prev = b
 	}
-	return SpecialChars{Filename: filename, Crlf: crlf, Lf: lf, Tab: tab, Bom8: bom8, Bom16: bom16, Nul: nul, BytesRead: bytesRead}, charsError{code: 0, err: ""}
 }
 
 // OutputTextTable - display a text table with each filename and the number of special characters
