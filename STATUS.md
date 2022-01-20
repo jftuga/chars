@@ -1,3 +1,7 @@
+**Discussion**
+
+* https://old.reddit.com/r/golang/comments/s64jye/i_wrote_a_cli_tool_to_determine_the_endofline/
+
 **Done**
 
 * `chars` is now a package, with a corresponding `cmd/chars/cmd.go` for the CLI interface
