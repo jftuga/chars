@@ -4,6 +4,21 @@
 
 **Done**
 
+* **2022-01-21:**
+* With files named: `a*b`and `aab`, `chars a*b` now works correctly
+* *Case folding* for Windows only is somewhat implemented in [case.go](case.go)
+* * This can be disabled by the `-s` switch; thus allowing for character classes in between a set of `[]`
+* * PRs to improve this are most welcomed
+* `chars.OutputTextTable()` now returns an error when output can not be displayed:
+* * Example: `chars /dev/null > /dev/full`
+* Added to `README.md`:
+* * Use`<` redirection when possible instead of `|`
+* * Using `Get-Content -AsByteStream` with newer versions of powershell
+* * Under powershell, consider using `curl --output`
+* When reading file chunks, the block size has been changed from `1024` to `4096` -- a small performance improvement
+* `chars.searchForSpecialChars()` has been rewritten to be significantly more performant.
+
+* **2022-01-19:**
 * `chars` is now a package, with a corresponding `cmd/chars/cmd.go` for the CLI interface
 * This will now report special chars for STDIN
 * * cat filename | chars -
@@ -13,7 +28,7 @@
 * If a glob doesn't match any files, no output or error will occur
 * Added `-j` output to create JSON format
 * I think globbing is fixed for cross-platform.  
-* * I am still globbing because I want this feature for Windows, but since Linux bash, MacOS zsh already expand file names beforehand this should not cause a problem.
+* * I am still globbing because I want this feature for Windows, but since Linux bash, macOS zsh already expand file names beforehand this should not cause a problem.
 * * The program is able to handle files on Linux actually containing a `*` in their name. 
 * * Please let me know if you can think of any problems that may arise with this method.
 * It reads files in chunks as to not consume too much memory.
