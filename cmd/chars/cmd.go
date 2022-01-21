@@ -15,23 +15,24 @@ import (
 	"github.com/jftuga/chars"
 	"os"
 	"regexp"
+	"runtime"
 )
 
 // Usage - display help when no cmd-line args given
 func Usage() {
-	fmt.Fprintf(os.Stderr, "\n")
-	fmt.Fprintf(os.Stderr, "%s v%s\n", chars.PgmName, chars.PgmVersion)
-	fmt.Fprintln(os.Stderr, chars.PgmDesc)
-	fmt.Fprintln(os.Stderr, chars.PgmUrl)
-	fmt.Fprintf(os.Stderr, "\n")
-	fmt.Fprintln(os.Stderr, "Usage:")
-	fmt.Fprintf(os.Stderr, "%s [filename or file-glob 1] [filename or file-glob 2] ...\n", chars.PgmName)
+	_, _ = fmt.Fprintf(os.Stderr, "\n")
+	_, _ = fmt.Fprintf(os.Stderr, "%s v%s\n", chars.PgmName, chars.PgmVersion)
+	_, _ = fmt.Fprintln(os.Stderr, chars.PgmDesc)
+	_, _ = fmt.Fprintln(os.Stderr, chars.PgmUrl)
+	_, _ = fmt.Fprintf(os.Stderr, "\n")
+	_, _ = fmt.Fprintln(os.Stderr, "Usage:")
+	_, _ = fmt.Fprintf(os.Stderr, "%s [filename or file-glob 1] [filename or file-glob 2] ...\n", chars.PgmName)
 	flag.PrintDefaults()
-	fmt.Fprintf(os.Stderr, "\n")
-	fmt.Fprintln(os.Stderr, "Notes:")
-	fmt.Fprintln(os.Stderr, "Use - to read a file from STDIN")
-	fmt.Fprintf(os.Stderr, "On Windows, try: %s *  -or-  %s */*  -or-  %s */*/*\n", chars.PgmName, chars.PgmName, chars.PgmName)
-	fmt.Fprintf(os.Stderr, "\n")
+	_, _ = fmt.Fprintf(os.Stderr, "\n")
+	_, _ = fmt.Fprintln(os.Stderr, "Notes:")
+	_, _ = fmt.Fprintln(os.Stderr, "Use - to read a file from STDIN")
+	_, _ = fmt.Fprintf(os.Stderr, "On Windows, try: %s *  -or-  %s */*  -or-  %s */*/*\n", chars.PgmName, chars.PgmName, chars.PgmName)
+	_, _ = fmt.Fprintf(os.Stderr, "\n")
 }
 
 // main - process cmd-line args; process files given on cmd-line or process file read from STDIN
@@ -46,7 +47,7 @@ func main() {
 	allGlobs := flag.Args()
 
 	if *argsMaxLength > 0 && *argsJSON {
-		fmt.Fprintf(os.Stderr, "-l and -j are mutually exclusive")
+		_, _ = fmt.Fprintf(os.Stderr, "-l and -j are mutually exclusive")
 		os.Exit(2)
 	}
 
@@ -55,7 +56,7 @@ func main() {
 	if len(*argsExclude) > 0 {
 		excludeFiles, err = regexp.Compile(*argsExclude)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Invalid 'exclude' regular expression: %s\n", *argsExclude)
+			_, _ = fmt.Fprintf(os.Stderr, "Invalid 'exclude' regular expression: %s\n", *argsExclude)
 			os.Exit(3)
 		}
 	}
@@ -69,9 +70,13 @@ func main() {
 	var allStats []chars.SpecialChars
 	for _, fileSelection := range allGlobs {
 		if fileSelection == "-" {
-			chars.ProcessStdin(&allStats, *argsBinary, excludeFiles)
+			chars.ProcessStdin(&allStats, *argsBinary)
 		} else {
-			chars.ProcessGlob(fileSelection, &allStats, *argsBinary, excludeFiles)
+			if runtime.GOOS == "windows" {
+				chars.ProcessGlob(fileSelection, &allStats, *argsBinary, excludeFiles)
+			} else {
+				chars.ProcessFileList([]string{fileSelection}, &allStats, *argsBinary, excludeFiles)
+			}
 		}
 	}
 
@@ -82,6 +87,10 @@ func main() {
 			os.Exit(4)
 		}
 	} else {
-		chars.OutputTextTable(allStats, *argsMaxLength)
+		err := chars.OutputTextTable(allStats, *argsMaxLength)
+		if err != nil {
+			_, _ = fmt.Fprintf(os.Stderr, "Error: %s\n", err)
+			os.Exit(5)
+		}
 	}
 }
