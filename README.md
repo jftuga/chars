@@ -1,15 +1,15 @@
 # chars
 Determine the end-of-line format, tabs, bom, and nul characters
 
-Binaries for Windows, MacOS, Linux and FreeBSD are provided on the
+Binaries for Windows, macOS, Linux and FreeBSD are provided on the
 [releases page](https://github.com/jftuga/chars/releases).
 
 ## Usage
 
 * For help, run `chars -h`
 
-```shell
-chars v2.0.0
+```
+chars v2.1.0
 Determine the end-of-line format, tabs, bom, and nul
 https://github.com/jftuga/chars
 
@@ -71,23 +71,42 @@ PS C:\chars> .\chars.exe -e perf.*dat -l 32 C:\Windows\System32\p*
 ## Example 3
 
 * Pipe STDIN to `chars`
+* Use JSON output
 
 ```shell
-$ curl -s https://example.com/ | chars
-+----------+------+----+-----+-----+------+-------+-----------+
-| FILENAME | CRLF | LF | TAB | NUL | BOM8 | BOM16 | BYTESREAD |
-+----------+------+----+-----+-----+------+-------+-----------+
-| STDIN    |    0 | 46 |   0 |   0 |    0 |     0 |      1256 |
-+----------+------+----+-----+-----+------+-------+-----------+
+$ curl -s https://example.com/ | chars -j
+```
+
+```json
+[
+    {
+        "filename": "STDIN",
+        "crlf": 0,
+        "lf": 46,
+        "tab": 0,
+        "bom8": 0,
+        "bom16": 0,
+        "nul": 0,
+        "bytesRead": 1256
+    }
+]
 ```
 
 ## Reading from STDIN on Windows
 * **YMMV when piping to `STDIN` under Windows**
+* * Under `cmd`, instead of `type input.txt | chars`, use `<` redirection when possible: `chars < input.txt`
+* * Under a recent version of `powershell`, use `Get-Content -AsByteStream input.txt | chars` instead of just `Get-Content input.txt | chars`
 * `cmd` and `powershell` will skip `BOM` characters; these 2 fields will both report a value of `0`
 * `cmd` and `powershell` will skip `NUL` characters; this field report a value of `0`
 * `cmd` will convert `LF` to `CRLF` for `UTF-16` encoded files
 * `powershell` will convert `LF` to `CRLF`
 * Piping from programs such as `curl` will return `LF` characters under `cmd`, but `CRLF` under `powershell`
+* * Under powershell, consider using `curl --output`
+
+## Case Folding on Windows
+* [Case folding](https://www.w3.org/TR/charmod-norm/#definitionCaseFolding) on Windows is somewhat implemented in [case.go](case.go).
+* * This programs attempts case-insensitive filename matching since this is the expected behavior on Windows.
+* * It is hard-coded to `English`.
 
 ## Wikipedia
 
