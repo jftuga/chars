@@ -34,12 +34,10 @@
 * It reads files in chunks as to not consume too much memory.
 
 **To Do**
-* On Windows, filenames are case-sensitive, but expected behavior is case-insensitive
-* * Do you think something this would be a good fix: https://wenzr.wordpress.com/2018/04/09/go-glob-case-insensitive/
-* Checking for errors when writing output has only been implemented for json output and not for `table.Render()`
-* * Could you please expand on: *"Use a buffered writer and, as I had just pointed out, check the result of Flush after Render returns."* as I am not familiar with this?
-* I am not very happy with `searchForSpecialChars()`.  It works, but seems kludgy -- how could this be function be simplified?
-* You mentioned *"paths are a tricky business"*. I'm OK if my program does not work for unconventional, non-standard file names.
+* ~~On Windows, filenames are case-sensitive, but expected behavior is case-insensitive~~
+* ~~Checking for errors when writing output has only been implemented for json output and not for `table.Render()`~~
+* ~~I am not very happy with `searchForSpecialChars()`.  It works, but seems kludgy -- how could this be function be simplified?~~
+* ~~You mentioned *"paths are a tricky business"*. I'm OK if my program does not work for unconventional, non-standard file names.~~
 * Create `chars_test.go` once everything has been stabilized.
 * Create API examples in `README.md`
 
