@@ -41,10 +41,17 @@ func main() {
 	argsExclude := flag.String("e", "", "exclude based on regular expression; use .* instead of *")
 	argsMaxLength := flag.Int("l", 0, "shorten files names to a maximum of this length")
 	argsJSON := flag.Bool("j", false, "output results in JSON format; can't be used with -l")
+	argsVersion := flag.Bool("v", false, "display version and then exit")
+	argsFail := flag.String("f", "", "fail with OS exit code=100 if any of the included characters exist; ex: -f crlf,nul,bom8")
 
 	flag.Usage = Usage
 	flag.Parse()
 	allGlobs := flag.Args()
+
+	if *argsVersion {
+		fmt.Printf("%s\n", chars.PgmVersion)
+		os.Exit(0)
+	}
 
 	if *argsMaxLength > 0 && *argsJSON {
 		_, _ = fmt.Fprintf(os.Stderr, "-l and -j are mutually exclusive")
@@ -68,16 +75,18 @@ func main() {
 
 	// allStats will be modified in-place by one of the two functions below
 	var allStats []chars.SpecialChars
+	var failed, current uint64
 	for _, fileSelection := range allGlobs {
 		if fileSelection == "-" {
-			chars.ProcessStdin(&allStats, *argsBinary)
+			current, _ = chars.ProcessStdin(&allStats, *argsBinary, *argsFail)
 		} else {
 			if runtime.GOOS == "windows" {
-				chars.ProcessGlob(fileSelection, &allStats, *argsBinary, excludeFiles)
+				current = chars.ProcessGlob(fileSelection, &allStats, *argsBinary, excludeFiles, *argsFail)
 			} else {
-				chars.ProcessFileList([]string{fileSelection}, &allStats, *argsBinary, excludeFiles)
+				current = chars.ProcessFileList([]string{fileSelection}, &allStats, *argsBinary, excludeFiles, *argsFail)
 			}
 		}
+		failed += current
 	}
 
 	// output results to either JSON or text table
@@ -92,5 +101,9 @@ func main() {
 			_, _ = fmt.Fprintf(os.Stderr, "Error: %s\n", err)
 			os.Exit(5)
 		}
+	}
+
+	if len(*argsFail) > 0 && failed > 0 {
+		os.Exit(100)
 	}
 }

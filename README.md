@@ -71,7 +71,7 @@ PS C:\chars> .\chars.exe -e perf.*dat -l 32 C:\Windows\System32\p*
 ## Example 3
 
 * Pipe STDIN to `chars`
-* Use JSON output
+* Use JSON output, with `-j`
 
 ```shell
 $ curl -s https://example.com/ | chars -j
@@ -90,6 +90,23 @@ $ curl -s https://example.com/ | chars -j
         "bytesRead": 1256
     }
 ]
+```
+
+## Example 4
+
+* Fail when certain characters are detected, with `-f`
+* * OS exit code on a `-f` failure is always `100`
+* * `-f` is a comma-delimited list containing: `crlf`, `lf`, `tab`, `nul`, `bom8`, `bom16`
+
+```shell
+$ chars -f lf,tab /etc/group ; echo $?
++------------+------+----+-----+-----+------+-------+-----------+
+|  FILENAME  | CRLF | LF | TAB | NUL | BOM8 | BOM16 | BYTESREAD |
++------------+------+----+-----+-----+------+-------+-----------+
+| /etc/group |    0 | 58 |   0 |   0 |    0 |     0 |       795 |
++------------+------+----+-----+-----+------+-------+-----------+
+
+100
 ```
 
 ## Reading from STDIN on Windows

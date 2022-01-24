@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strconv"
+	"strings"
 	"unicode/utf8"
 
 	"github.com/jftuga/ellipsis"
@@ -29,7 +30,7 @@ import (
 const PgmName string = "chars"
 const PgmDesc string = "Determine the end-of-line format, tabs, bom, and nul"
 const PgmUrl string = "https://github.com/jftuga/chars"
-const PgmVersion string = "2.1.0"
+const PgmVersion string = "2.2.0"
 const BlockSize int = 4096
 
 type SpecialChars struct {
@@ -215,7 +216,7 @@ func GetJSON(allStats []SpecialChars) string {
 }
 
 // ProcessGlob - process all files matching the file-glob
-func ProcessGlob(globArg string, allStats *[]SpecialChars, examineBinary bool, excludeMatched *regexp.Regexp) {
+func ProcessGlob(globArg string, allStats *[]SpecialChars, examineBinary bool, excludeMatched *regexp.Regexp, fail string) uint64 {
 	var err error
 	anyCase := CaseInsensitive(globArg)
 	if len(globArg) > 0 && len(anyCase) == 0 {
@@ -229,11 +230,11 @@ func ProcessGlob(globArg string, allStats *[]SpecialChars, examineBinary bool, e
 	if len(globFiles) == 0 {
 		globFiles = []string{anyCase}
 	}
-	ProcessFileList(globFiles, allStats, examineBinary, excludeMatched)
+	return ProcessFileList(globFiles, allStats, examineBinary, excludeMatched, fail)
 }
 
 // ProcessFileList - process a list of filenames
-func ProcessFileList(globFiles []string, allStats *[]SpecialChars, examineBinary bool, excludeMatched *regexp.Regexp) {
+func ProcessFileList(globFiles []string, allStats *[]SpecialChars, examineBinary bool, excludeMatched *regexp.Regexp, fail string) uint64 {
 	var file *os.File
 	for _, filename := range globFiles {
 		info, err := os.Stat(filename)
@@ -272,18 +273,53 @@ func ProcessFileList(globFiles []string, allStats *[]SpecialChars, examineBinary
 		}
 		*allStats = append(*allStats, stats)
 	}
+	if len(fail) > 0 {
+		return GetFailures(fail, allStats)
+	}
+	return 0
 }
 
 // ProcessStdin - read a file stream directly from STDIN
-func ProcessStdin(allStats *[]SpecialChars, examineBinary bool) CharsError {
+func ProcessStdin(allStats *[]SpecialChars, examineBinary bool, fail string) (uint64, CharsError) {
 	var charsErr CharsError
 
 	reader := bufio.NewReader(os.Stdin)
 	stats, charsErr := searchForSpecialChars("STDIN", reader, examineBinary)
 	if charsErr.code != 0 {
-		return charsErr
+		return 0, charsErr
 	}
 
 	*allStats = append(*allStats, stats)
-	return charsErr
+	if len(fail) > 0 {
+		return GetFailures(fail, allStats), charsErr
+	}
+	return 0, charsErr
+}
+
+// GetFailures - parse as comma-delimited list and return the number of characters in the given character list
+func GetFailures(commaList string, allStats *[]SpecialChars) uint64 {
+	var failed uint64
+
+	classes := strings.Split(strings.ToLower(commaList), ",")
+	for _, class := range classes {
+		for _, entry := range *allStats {
+			switch class {
+			case "crlf":
+				failed += entry.Crlf
+			case "lf":
+				failed += entry.Lf
+			case "tab":
+				failed += entry.Tab
+			case "bom8":
+				failed += entry.Bom8
+			case "bom16":
+				failed += entry.Bom16
+			case "nul":
+				failed += entry.Nul
+			default:
+				fmt.Fprintf(os.Stderr, "Unknown character passed to -f: %s\n", class)
+			}
+		}
+	}
+	return failed
 }
