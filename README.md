@@ -112,6 +112,19 @@ $ chars -f lf,tab /etc/group ; echo $?
 100
 ```
 
+## Example 5
+
+* Output to JSON, with `-j`
+* Use `-e` to exclude and filenames starting with `go`, such as `go.mod` and `go.sum`
+* Use `jq` to output to `CSV` containing two columns: `filename`, `tab`
+* * Only include files that contain `tab` characters
+
+```shell
+$ chars -e '^go' -j * | jq -r '.[] | select(.tab> 0) | [.filename,.tab] | @csv'
+"case.go",80
+"chars.go",475
+```
+
 ## Reading from STDIN on Windows
 * **YMMV when piping to `STDIN` under Windows**
 * * Under `cmd`, instead of `type input.txt | chars`, use `<` redirection when possible: `chars < input.txt`
