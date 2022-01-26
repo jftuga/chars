@@ -120,7 +120,7 @@ $ chars -f lf,tab /etc/group ; echo $?
 * * Only include files that contain `tab` characters
 
 ```shell
-$ chars -e '^go' -j * | jq -r '.[] | select(.tab> 0) | [.filename,.tab] | @csv'
+$ chars -e '^go' -j * | jq -r '.[] | select(.tab > 0) | [.filename,.tab] | @csv'
 "case.go",80
 "chars.go",475
 ```
