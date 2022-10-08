@@ -43,7 +43,7 @@ func main() {
 	argsJSON := flag.Bool("j", false, "output results in JSON format; can't be used with -l")
 	argsVersion := flag.Bool("v", false, "display version and then exit")
 	argsFail := flag.String("f", "", "fail with OS exit code=100 if any of the included characters exist; ex: -f crlf,nul,bom8")
-	argsFailedFileList := flag.Bool("F", false, "when used with -f, only display a list of failed files (one per line")
+	argsFailedFileList := flag.Bool("F", false, "when used with -f, only display a list of failed files, one per line")
 
 	flag.Usage = Usage
 	flag.Parse()
