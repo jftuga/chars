@@ -30,7 +30,7 @@ import (
 const PgmName string = "chars"
 const PgmDesc string = "Determine the end-of-line format, tabs, bom, and nul"
 const PgmUrl string = "https://github.com/jftuga/chars"
-const PgmVersion string = "2.2.0"
+const PgmVersion string = "2.3.0"
 const BlockSize int = 4096
 
 type SpecialChars struct {
@@ -42,6 +42,7 @@ type SpecialChars struct {
 	Bom16     uint64 `json:"bom16"`
 	Nul       uint64 `json:"nul"`
 	BytesRead uint64 `json:"bytesRead"`
+	Failure   bool   `json:"failure"`
 }
 
 type CharsError struct {
@@ -201,6 +202,19 @@ func OutputTextTable(allStats []SpecialChars, maxLength int) error {
 	return w.Flush()
 }
 
+// OutputFailedFileList - only display a list of file names that have failed when using -F cmd line option
+func OutputFailedFileList(allStats []SpecialChars) {
+	if len(allStats) == 0 {
+		return
+	}
+
+	for _, stat := range allStats {
+		if stat.Failure {
+			_, _ = fmt.Println(stat.Filename)
+		}
+	}
+}
+
 // GetJSON - return results JSON format
 func GetJSON(allStats []SpecialChars) string {
 	j, err := json.MarshalIndent(allStats, "", "    ")
@@ -298,11 +312,12 @@ func ProcessStdin(allStats *[]SpecialChars, examineBinary bool, fail string) (ui
 
 // GetFailures - parse as comma-delimited list and return the number of characters in the given character list
 func GetFailures(commaList string, allStats *[]SpecialChars) uint64 {
-	var failed uint64
+	var failed, totalFailures uint64
 
 	classes := strings.Split(strings.ToLower(commaList), ",")
-	for _, class := range classes {
-		for _, entry := range *allStats {
+	for i, entry := range *allStats {
+		failed = 0
+		for _, class := range classes {
 			switch class {
 			case "crlf":
 				failed += entry.Crlf
@@ -320,6 +335,11 @@ func GetFailures(commaList string, allStats *[]SpecialChars) uint64 {
 				fmt.Fprintf(os.Stderr, "Unknown character passed to -f: %s\n", class)
 			}
 		}
+
+		if failed > 0 {
+			totalFailures += failed
+			(*allStats)[i].Failure = true
+		}
 	}
-	return failed
+	return totalFailures
 }

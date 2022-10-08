@@ -9,21 +9,22 @@ Binaries for Windows, macOS, Linux and FreeBSD are provided on the
 * For help, run `chars -h`
 
 ```
-chars v2.2.0
+chars v2.3.0
 Determine the end-of-line format, tabs, bom, and nul
 https://github.com/jftuga/chars
 
 Usage:
 chars [filename or file-glob 1] [filename or file-glob 2] ...
-  -b    examine binary files
+  -F	when used with -f, only display a list of failed files (one per line
+  -b	examine binary files
   -e string
         exclude based on regular expression; use .* instead of *
   -f string
         fail with OS exit code=100 if any of the included characters exist; ex: -f crlf,nul,bom8
-  -j    output results in JSON format; can't be used with -l
+  -j	output results in JSON format; can't be used with -l
   -l int
         shorten files names to a maximum of this length
-  -v    display version and then exit
+  -v	display version and then exit
 
 Notes:
 Use - to read a file from STDIN
@@ -113,6 +114,18 @@ $ chars -f lf,tab /etc/group ; echo $?
 ```
 
 ## Example 5
+* Fail when certain characters are detected, with `-f`
+* Only output failed file names, with `-F`
+
+```shell
+$ chars -f lf,tab -F /etc/gr* ; echo $?
+/etc/group
+/etc/group.bak
+
+100
+```
+
+## Example 6
 
 * Output to JSON, with `-j`
 * Use `-e` to exclude and filenames starting with `go`, such as `go.mod` and `go.sum`
