@@ -15,7 +15,7 @@ https://github.com/jftuga/chars
 
 Usage:
 chars [filename or file-glob 1] [filename or file-glob 2] ...
-  -F	when used with -f, only display a list of failed files (one per line
+  -F	when used with -f, only display a list of failed files, one per line
   -b	examine binary files
   -e string
         exclude based on regular expression; use .* instead of *
