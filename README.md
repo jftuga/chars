@@ -9,7 +9,7 @@ Binaries for Windows, macOS, Linux and FreeBSD are provided on the
 * For help, run `chars -h`
 
 ```
-chars v2.3.0
+chars v2.4.0
 Determine the end-of-line format, tabs, bom, and nul
 https://github.com/jftuga/chars
 
@@ -17,19 +17,24 @@ Usage:
 chars [filename or file-glob 1] [filename or file-glob 2] ...
   -F	when used with -f, only display a list of failed files, one per line
   -b	examine binary files
+  -c	add comma thousands separator to numeric values
   -e string
         exclude based on regular expression; use .* instead of *
   -f string
         fail with OS exit code=100 if any of the included characters exist; ex: -f crlf,nul,bom8
-  -j	output results in JSON format; can't be used with -l
+  -j	output results in JSON format; can't be used with -l; does not honor -t or -c
   -l int
         shorten files names to a maximum of this length
+        shorten files names to a maximum of this length
+  -t	append a row which includes a total for each column
   -v	display version and then exit
 
 Notes:
 Use - to read a file from STDIN
 On Windows, try: chars *  -or-  chars */*  -or-  chars */*/*
 ```
+
+___
 
 ## Example 1
 
@@ -137,6 +142,27 @@ $ chars -e '^go' -j * | jq -r '.[] | select(.tab > 0) | [.filename,.tab] | @csv'
 "case.go",80
 "chars.go",475
 ```
+
+## Example 7
+* Output totals, with `-t`
+* Output commas in numeric values, with `-c`
+* Exclude files containing `.g*`, with `-e`
+
+```shell
+PS C:\chars> .\chars.exe -t -c -e "\.g.*" *
++-----------------+------+-----+-----+-----+------+-------+-----------+
+|    FILENAME     | CRLF | LF  | TAB | NUL | BOM8 | BOM16 | BYTESREAD |
++-----------------+------+-----+-----+-----+------+-------+-----------+
+| LICENSE         |    0 |  21 |   0 |   0 |    0 |     0 |     1,068 |
+| README.md       |    0 | 178 |   4 |   0 |    0 |     0 |     6,656 |
+| STATUS.md       |    0 |  50 |   0 |   0 |    0 |     0 |     3,055 |
+| go.mod          |    0 |  11 |   3 |   0 |    0 |     0 |       214 |
+| go.sum          |    0 |   9 |   0 |   0 |    0 |     0 |       795 |
+| TOTALS: 5 files |    0 | 269 |   7 |   0 |    0 |     0 |    11,788 |
++-----------------+------+-----+-----+-----+------+-------+-----------+
+```
+
+___
 
 ## Reading from STDIN on Windows
 * **YMMV when piping to `STDIN` under Windows**

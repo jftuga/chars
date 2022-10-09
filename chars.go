@@ -30,7 +30,7 @@ import (
 const PgmName string = "chars"
 const PgmDesc string = "Determine the end-of-line format, tabs, bom, and nul"
 const PgmUrl string = "https://github.com/jftuga/chars"
-const PgmVersion string = "2.3.0"
+const PgmVersion string = "2.4.0"
 const BlockSize int = 4096
 
 type SpecialChars struct {
@@ -176,7 +176,7 @@ func searchForSpecialChars(filename string, rdr *bufio.Reader, examineBinary boo
 }*/
 
 // OutputTextTable - display a text table with each filename and the number of special characters
-func OutputTextTable(allStats []SpecialChars, maxLength int) error {
+func OutputTextTable(allStats []SpecialChars, maxLength int, wantTotals, wantCommas bool) error {
 	if len(allStats) == 0 {
 		return nil
 	}
@@ -187,6 +187,7 @@ func OutputTextTable(allStats []SpecialChars, maxLength int) error {
 	table.SetHeader([]string{"filename", "crlf", "lf", "tab", "nul", "bom8", "bom16", "bytesRead"})
 
 	var name string
+	var crlf, lf, tab, nul, bom8, bom16, bytesRead uint64
 	for _, s := range allStats {
 		if maxLength == 0 {
 			name = s.Filename
@@ -196,6 +197,40 @@ func OutputTextTable(allStats []SpecialChars, maxLength int) error {
 		row := []string{name, strconv.FormatUint(s.Crlf, 10), strconv.FormatUint(s.Lf, 10),
 			strconv.FormatUint(s.Tab, 10), strconv.FormatUint(s.Nul, 10), strconv.FormatUint(s.Bom8, 10),
 			strconv.FormatUint(s.Bom16, 10), strconv.FormatUint(s.BytesRead, 10)}
+		if wantCommas {
+			row[1] = RenderInteger("#,###.", int64(s.Crlf))
+			row[2] = RenderInteger("#,###.", int64(s.Lf))
+			row[3] = RenderInteger("#,###.", int64(s.Tab))
+			row[4] = RenderInteger("#,###.", int64(s.Nul))
+			row[5] = RenderInteger("#,###.", int64(s.Bom8))
+			row[6] = RenderInteger("#,###.", int64(s.Bom16))
+			row[7] = RenderInteger("#,###.", int64(s.BytesRead))
+		}
+		if wantTotals {
+			crlf += s.Crlf
+			lf += s.Lf
+			tab += s.Tab
+			nul += s.Nul
+			bom8 += s.Bom8
+			bom16 += s.Bom16
+			bytesRead += s.BytesRead
+		}
+		table.Append(row)
+	}
+	if wantTotals {
+		totals := fmt.Sprintf("TOTALS: %d files", len(allStats))
+		row := []string{totals, strconv.FormatUint(crlf, 10), strconv.FormatUint(lf, 10),
+			strconv.FormatUint(tab, 10), strconv.FormatUint(nul, 10), strconv.FormatUint(bom8, 10),
+			strconv.FormatUint(bom16, 10), strconv.FormatUint(bytesRead, 10)}
+		if wantCommas {
+			row[1] = RenderInteger("#,###.", int64(crlf))
+			row[2] = RenderInteger("#,###.", int64(lf))
+			row[3] = RenderInteger("#,###.", int64(tab))
+			row[4] = RenderInteger("#,###.", int64(nul))
+			row[5] = RenderInteger("#,###.", int64(bom8))
+			row[6] = RenderInteger("#,###.", int64(bom16))
+			row[7] = RenderInteger("#,###.", int64(bytesRead))
+		}
 		table.Append(row)
 	}
 	table.Render()

@@ -40,10 +40,12 @@ func main() {
 	argsBinary := flag.Bool("b", false, "examine binary files")
 	argsExclude := flag.String("e", "", "exclude based on regular expression; use .* instead of *")
 	argsMaxLength := flag.Int("l", 0, "shorten files names to a maximum of this length")
-	argsJSON := flag.Bool("j", false, "output results in JSON format; can't be used with -l")
+	argsJSON := flag.Bool("j", false, "output results in JSON format; can't be used with -l; does not honor -t or -c")
 	argsVersion := flag.Bool("v", false, "display version and then exit")
 	argsFail := flag.String("f", "", "fail with OS exit code=100 if any of the included characters exist; ex: -f crlf,nul,bom8")
 	argsFailedFileList := flag.Bool("F", false, "when used with -f, only display a list of failed files, one per line")
+	argsTotals := flag.Bool("t", false, "append a row which includes a total for each column")
+	argsComma := flag.Bool("c", false, "add comma thousands separator to numeric values")
 
 	flag.Usage = Usage
 	flag.Parse()
@@ -99,7 +101,7 @@ func main() {
 	} else if *argsFailedFileList && len(*argsFail) > 0 && failed > 0 {
 		chars.OutputFailedFileList(allStats)
 	} else {
-		err := chars.OutputTextTable(allStats, *argsMaxLength)
+		err := chars.OutputTextTable(allStats, *argsMaxLength, *argsTotals, *argsComma)
 		if err != nil {
 			_, _ = fmt.Fprintf(os.Stderr, "Error: %s\n", err)
 			os.Exit(5)
