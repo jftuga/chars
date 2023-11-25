@@ -375,8 +375,7 @@ func GetFailures(commaList string, allStats *[]SpecialChars) uint64 {
 		if failed > 0 {
 			totalFailures += failed
 			(*allStats)[i].Failure = true
-			failedAllStats = append(failedAllStats, &(*allStats)[i])
-
+			failedAllStats = append(failedAllStats, (*allStats)[i])
 		}
 	}
 	return totalFailures
