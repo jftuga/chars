@@ -1,9 +1,6 @@
 # chars
 Determine the end-of-line format, tabs, bom, and nul characters
 
-Binaries for Windows, macOS, Linux and FreeBSD are provided on the
-[releases page](https://github.com/jftuga/chars/releases).
-
 ## Usage
 
 * For help, run `chars -h`
@@ -33,6 +30,11 @@ Notes:
 Use - to read a file from STDIN
 On Windows, try: chars *  -or-  chars */*  -or-  chars */*/*
 ```
+
+## Installation
+
+* macOS: `brew update; brew install jftuga/tap/chars`
+* Binaries for Linux, macOS and Windows are provided in the [releases](https://github.com/jftuga/chars/releases) section.
 
 ___
 
