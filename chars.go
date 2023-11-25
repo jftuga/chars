@@ -30,7 +30,7 @@ import (
 const PgmName string = "chars"
 const PgmDesc string = "Determine the end-of-line format, tabs, bom, and nul"
 const PgmUrl string = "https://github.com/jftuga/chars"
-const PgmVersion string = "2.4.0"
+const PgmVersion string = "2.4.1"
 const BlockSize int = 4096
 
 type SpecialChars struct {
@@ -348,6 +348,7 @@ func ProcessStdin(allStats *[]SpecialChars, examineBinary bool, fail string) (ui
 // GetFailures - parse as comma-delimited list and return the number of characters in the given character list
 func GetFailures(commaList string, allStats *[]SpecialChars) uint64 {
 	var failed, totalFailures uint64
+	var failedAllStats []SpecialChars
 
 	classes := strings.Split(strings.ToLower(commaList), ",")
 	for i, entry := range *allStats {
@@ -374,6 +375,8 @@ func GetFailures(commaList string, allStats *[]SpecialChars) uint64 {
 		if failed > 0 {
 			totalFailures += failed
 			(*allStats)[i].Failure = true
+			failedAllStats = append(failedAllStats, &(*allStats)[i])
+
 		}
 	}
 	return totalFailures

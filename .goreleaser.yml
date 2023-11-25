@@ -1,61 +1,82 @@
-project_name: chars
-build:
-  binary: chars
-  dir: ./cmd/chars
-  env:
-    - CGO_ENABLE=0
-  goos:
-    - linux
-    - freebsd
-    - windows
-    - darwin
-  goarch:
-    - amd64
-    - arm
-    - arm64
-    - mipsle
-  goarm:
-    - 7
-  ignore:
-    - goos: darwin
-      goarch: 386
-    - goos: linux
-      goarch: 386
-    - goos: freebsd
-      goarch: arm
-    - goos: freebsd
-      goarch: arm64
-    - goos: windows
-      goarch: arm64
-    - goos: windows
-      goarch: arm
-      goarm: 7
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: id1
+    binary: chars
+    ldflags:
+      - -extldflags "-static" -s -w -X main.commit={{.Commit}} -X main.date={{.Date}} -X main.builtBy=goreleaser -X main.Version={{.Version}} -X main.Revision={{.ShortCommit}}
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - freebsd
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+      - arm
+      - ppc64le
+    goarm:
+      - "7"
+    ignore:
+      - goos: freebsd
+        goarch: arm64
+      - goos: freebsd
+        goarch: arm
+      - goos: freebsd
+        goarch: ppc64le
+      - goos: darwin
+        goarch: arm
+      - goos: darwin
+        goarch: ppc64le
+
+  - id: id2
+    binary: chars
+    ldflags:
+      - -extldflags "-static" -s -w -X main.commit={{.Commit}} -X main.date={{.Date}} -X main.builtBy=goreleaser -X main.Version={{.Version}} -X main.Revision={{.ShortCommit}}
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - windows
+    goarch:
+      - amd64
+    hooks:
+      post:
+        - upx -9 "{{ .Path }}"
 
 archives:
-  -
-    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}{{ if .Mips }}_{{ .Mips }}{{ end }}"
+  - name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     format: tar.xz
     format_overrides:
       - goos: windows
         format: zip
-    replacements:
-      darwin: MacOS
-      linux: Linux
-      freebsd: FreeBSD
-      windows: Windows
-      amd64: x86_64
     wrap_in_directory: true
     files:
       - LICENSE
       - README.md
-      
+
 checksum:
   name_template: "{{ .ProjectName }}_{{ .Version }}--checksums.txt"
 release:
-  draft: true
+  draft: false
 changelog:
   sort: asc
   filters:
     exclude:
-    - '^docs:'
-    - '^test:'
+      - "^docs:"
+      - "^test:"
+
+brews:
+  - name: chars
+    repository:
+      owner: jftuga
+      name: homebrew-tap
+    commit_author:
+      name: jftuga
+      email: jftuga@users.noreply.github.com
+    homepage: https://github.com/jftuga/chars
+    description: "Determine the end-of-line format, tabs, bom, and nul characters"
+    test: system "#{bin}/chars -v"
+    install: bin.install "chars"
