@@ -5,6 +5,7 @@ before:
 builds:
   - id: id1
     binary: chars
+    dir: ./cmd/chars
     ldflags:
       - -extldflags "-static" -s -w -X main.commit={{.Commit}} -X main.date={{.Date}} -X main.builtBy=goreleaser -X main.Version={{.Version}} -X main.Revision={{.ShortCommit}}
     env:
@@ -34,6 +35,7 @@ builds:
 
   - id: id2
     binary: chars
+    dir: ./cmd/chars
     ldflags:
       - -extldflags "-static" -s -w -X main.commit={{.Commit}} -X main.date={{.Date}} -X main.builtBy=goreleaser -X main.Version={{.Version}} -X main.Revision={{.ShortCommit}}
     env:
