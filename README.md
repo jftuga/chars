@@ -44,7 +44,7 @@ ___
 * * Only report files in the current directory
 * * Report text files only since `-b` is not used
 
-```shell
+```ps1con
 PS C:\chars> .\chars.exe *
 +-----------------+------+-----+-----+------+------+-------+-----------+
 |    FILENAME     | CRLF | LF  | TAB | NUL  | BOM8 | BOM16 | BYTESREAD |
@@ -66,7 +66,7 @@ PS C:\chars> .\chars.exe *
 * * Exclude all files matching `perf.*dat`
 * * Shorten filenames to a maximum length of `32`
 
-```shell
+```ps1con
 PS C:\chars> .\chars.exe -e perf.*dat -l 32 C:\Windows\System32\p*
 +----------------------------------+------+----+-----+------+------+-------+-----------+
 |             FILENAME             | CRLF | LF | TAB | NUL  | BOM8 | BOM16 | BYTESREAD |
@@ -84,7 +84,7 @@ PS C:\chars> .\chars.exe -e perf.*dat -l 32 C:\Windows\System32\p*
 * Pipe STDIN to `chars`
 * Use JSON output, with `-j`
 
-```shell
+```console
 $ curl -s https://example.com/ | chars -j
 ```
 
@@ -109,7 +109,7 @@ $ curl -s https://example.com/ | chars -j
 * * OS exit code on a `-f` failure is always `100`
 * * `-f` is a comma-delimited list containing: `crlf`, `lf`, `tab`, `nul`, `bom8`, `bom16`
 
-```shell
+```console
 $ chars -f lf,tab /etc/group ; echo $?
 +------------+------+----+-----+-----+------+-------+-----------+
 |  FILENAME  | CRLF | LF | TAB | NUL | BOM8 | BOM16 | BYTESREAD |
@@ -124,7 +124,7 @@ $ chars -f lf,tab /etc/group ; echo $?
 * Fail when certain characters are detected, with `-f`
 * Only output failed file names, with `-F`
 
-```shell
+```console
 $ chars -f lf,tab -F /etc/gr* ; echo $?
 /etc/group
 /etc/group.bak
@@ -139,7 +139,7 @@ $ chars -f lf,tab -F /etc/gr* ; echo $?
 * Use `jq` to output to `CSV` containing two columns: `filename`, `tab`
 * * Only include files that contain `tab` characters
 
-```shell
+```console
 $ chars -e '^go' -j * | jq -r '.[] | select(.tab > 0) | [.filename,.tab] | @csv'
 "case.go",80
 "chars.go",475
@@ -150,7 +150,7 @@ $ chars -e '^go' -j * | jq -r '.[] | select(.tab > 0) | [.filename,.tab] | @csv'
 * Output commas in numeric values, with `-c`
 * Exclude files containing `.g*`, with `-e`
 
-```shell
+```ps1con
 PS C:\chars> .\chars.exe -t -c -e "\.g.*" *
 +-----------------+------+-----+-----+-----+------+-------+-----------+
 |    FILENAME     | CRLF | LF  | TAB | NUL | BOM8 | BOM16 | BYTESREAD |
