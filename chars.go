@@ -30,7 +30,7 @@ import (
 const PgmName string = "chars"
 const PgmDesc string = "Determine the end-of-line format, tabs, bom, and nul"
 const PgmUrl string = "https://github.com/jftuga/chars"
-const PgmVersion string = "2.4.1"
+const PgmVersion string = "2.5.0"
 const BlockSize int = 4096
 
 type SpecialChars struct {
@@ -41,6 +41,7 @@ type SpecialChars struct {
 	Bom8      uint64 `json:"bom8"`
 	Bom16     uint64 `json:"bom16"`
 	Nul       uint64 `json:"nul"`
+	NonAscii  uint64 `json:"nonAscii"`
 	BytesRead uint64 `json:"bytesRead"`
 	Failure   bool   `json:"failure"`
 }
@@ -119,12 +120,12 @@ func searchForSpecialChars(filename string, rdr *bufio.Reader, examineBinary boo
 		return SpecialChars{}, CharsError{code: 2, err: fmt.Sprintf("skipping unwanted binary file: %s", filename)}
 	}
 
-	var tab, lf, crlf, nul, bytesRead uint64
+	var tab, lf, crlf, nul, nonAscii, bytesRead uint64
 
 	last := byte(0)
-	buff := make([]byte, 0, BlockSize)
+	buff := make([]byte, BlockSize)
 	for {
-		n, err := rdr.Read(buff[:cap(buff)])
+		n, err := rdr.Read(buff)
 		buff = buff[:n]
 		bytesRead += uint64(n)
 		if n == 0 {
@@ -150,6 +151,8 @@ func searchForSpecialChars(filename string, rdr *bufio.Reader, examineBinary boo
 				} else if b == '\t' {
 					tab++
 				}
+			} else if b > 127 {
+				nonAscii++
 			}
 			last = b
 		}
@@ -160,7 +163,7 @@ func searchForSpecialChars(filename string, rdr *bufio.Reader, examineBinary boo
 	}
 
 	sc := SpecialChars{Filename: filename,
-		Crlf: crlf, Lf: lf, Tab: tab, Bom8: bom8, Bom16: bom16, Nul: nul, BytesRead: bytesRead,
+		Crlf: crlf, Lf: lf, Tab: tab, Bom8: bom8, Bom16: bom16, Nul: nul, NonAscii: nonAscii, BytesRead: bytesRead,
 	}
 	return sc, CharsError{code: 0, err: ""}
 }
@@ -184,10 +187,10 @@ func OutputTextTable(allStats []SpecialChars, maxLength int, wantTotals, wantCom
 	// sortByName(allStats)
 	w := bufio.NewWriter(os.Stdout)
 	table := tablewriter.NewWriter(w)
-	table.SetHeader([]string{"filename", "crlf", "lf", "tab", "nul", "bom8", "bom16", "bytesRead"})
+	table.SetHeader([]string{"filename", "crlf", "lf", "tab", "nul", "bom8", "bom16", "non-ASCII", "bytesRead"})
 
 	var name string
-	var crlf, lf, tab, nul, bom8, bom16, bytesRead uint64
+	var crlf, lf, tab, nul, bom8, bom16, nonAscii, bytesRead uint64
 	for _, s := range allStats {
 		if maxLength == 0 {
 			name = s.Filename
@@ -196,7 +199,7 @@ func OutputTextTable(allStats []SpecialChars, maxLength int, wantTotals, wantCom
 		}
 		row := []string{name, strconv.FormatUint(s.Crlf, 10), strconv.FormatUint(s.Lf, 10),
 			strconv.FormatUint(s.Tab, 10), strconv.FormatUint(s.Nul, 10), strconv.FormatUint(s.Bom8, 10),
-			strconv.FormatUint(s.Bom16, 10), strconv.FormatUint(s.BytesRead, 10)}
+			strconv.FormatUint(s.Bom16, 10), strconv.FormatUint(s.NonAscii, 10), strconv.FormatUint(s.BytesRead, 10)}
 		if wantCommas {
 			row[1] = RenderInteger("#,###.", int64(s.Crlf))
 			row[2] = RenderInteger("#,###.", int64(s.Lf))
@@ -204,7 +207,8 @@ func OutputTextTable(allStats []SpecialChars, maxLength int, wantTotals, wantCom
 			row[4] = RenderInteger("#,###.", int64(s.Nul))
 			row[5] = RenderInteger("#,###.", int64(s.Bom8))
 			row[6] = RenderInteger("#,###.", int64(s.Bom16))
-			row[7] = RenderInteger("#,###.", int64(s.BytesRead))
+			row[7] = RenderInteger("#,###.", int64(s.NonAscii))
+			row[8] = RenderInteger("#,###.", int64(s.BytesRead))
 		}
 		if wantTotals {
 			crlf += s.Crlf
@@ -213,6 +217,7 @@ func OutputTextTable(allStats []SpecialChars, maxLength int, wantTotals, wantCom
 			nul += s.Nul
 			bom8 += s.Bom8
 			bom16 += s.Bom16
+			nonAscii += s.NonAscii
 			bytesRead += s.BytesRead
 		}
 		table.Append(row)
@@ -221,7 +226,7 @@ func OutputTextTable(allStats []SpecialChars, maxLength int, wantTotals, wantCom
 		totals := fmt.Sprintf("TOTALS: %d files", len(allStats))
 		row := []string{totals, strconv.FormatUint(crlf, 10), strconv.FormatUint(lf, 10),
 			strconv.FormatUint(tab, 10), strconv.FormatUint(nul, 10), strconv.FormatUint(bom8, 10),
-			strconv.FormatUint(bom16, 10), strconv.FormatUint(bytesRead, 10)}
+			strconv.FormatUint(bom16, 10), strconv.FormatUint(nonAscii, 10), strconv.FormatUint(bytesRead, 10)}
 		if wantCommas {
 			row[1] = RenderInteger("#,###.", int64(crlf))
 			row[2] = RenderInteger("#,###.", int64(lf))
@@ -229,7 +234,8 @@ func OutputTextTable(allStats []SpecialChars, maxLength int, wantTotals, wantCom
 			row[4] = RenderInteger("#,###.", int64(nul))
 			row[5] = RenderInteger("#,###.", int64(bom8))
 			row[6] = RenderInteger("#,###.", int64(bom16))
-			row[7] = RenderInteger("#,###.", int64(bytesRead))
+			row[7] = RenderInteger("#,###.", int64(nonAscii))
+			row[8] = RenderInteger("#,###.", int64(bytesRead))
 		}
 		table.Append(row)
 	}
@@ -365,6 +371,8 @@ func GetFailures(commaList string, allStats *[]SpecialChars) uint64 {
 				failed += entry.Bom8
 			case "bom16":
 				failed += entry.Bom16
+			case "nonascii":
+				failed += entry.NonAscii
 			case "nul":
 				failed += entry.Nul
 			default:

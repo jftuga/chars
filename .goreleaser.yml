@@ -1,9 +1,11 @@
+version: 2
+
 before:
   hooks:
     - go mod tidy
 
 builds:
-  - id: id1
+  - id: chars
     binary: chars
     dir: ./cmd/chars
     ldflags:
@@ -33,7 +35,7 @@ builds:
       - goos: darwin
         goarch: ppc64le
 
-  - id: id2
+  - id: chars-win
     binary: chars
     dir: ./cmd/chars
     ldflags:
@@ -75,6 +77,7 @@ brews:
     repository:
       owner: jftuga
       name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TOKEN }}"
     commit_author:
       name: jftuga
       email: jftuga@users.noreply.github.com
