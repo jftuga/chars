@@ -6,24 +6,27 @@ Determine the end-of-line format, tabs, bom, and nul characters
 * For help, run `chars -h`
 
 ```
-chars v2.5.0
+
+chars v2.6.0
 Determine the end-of-line format, tabs, bom, and nul
 https://github.com/jftuga/chars
 
 Usage:
 chars [filename or file-glob 1] [filename or file-glob 2] ...
-  -F	when used with -f, only display a list of failed files, one per line
-  -b	examine binary files
-  -c	add comma thousands separator to numeric values
+  -F    when used with -f, only display a list of failed files, one per line
+  -b    examine binary files
+  -c    add comma thousands separator to numeric values
   -e string
         exclude based on regular expression; use .* instead of *
   -f string
         fail with OS exit code=100 if any of the included characters exist; ex: -f crlf,nul,bom8,nonascii
-  -j	output results in JSON format; can't be used with -l; does not honor -t or -c
+  -j    output results in JSON format; can't be used with -l; does not honor -t or -c
   -l int
         shorten files names to a maximum of this length
-  -t	append a row which includes a total for each column
-  -v	display version and then exit
+  -s string
+        sort output by column: filename, crlf, lf, tab, nul, bom8, bom16, nonascii, bytesread (default "filename")
+  -t    append a row which includes a total for each column
+  -v    display version and then exit
 
 Notes:
 Use - to read a file from STDIN

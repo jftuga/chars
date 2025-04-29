@@ -19,6 +19,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -30,7 +31,7 @@ import (
 const PgmName string = "chars"
 const PgmDesc string = "Determine the end-of-line format, tabs, bom, and nul"
 const PgmUrl string = "https://github.com/jftuga/chars"
-const PgmVersion string = "2.5.0"
+const PgmVersion string = "2.6.0"
 const BlockSize int = 4096
 
 type SpecialChars struct {
@@ -387,4 +388,55 @@ func GetFailures(commaList string, allStats *[]SpecialChars) uint64 {
 		}
 	}
 	return totalFailures
+}
+
+// sortByColumn - sorts a slice of SpecialChars by the specified column
+func SortByColumn(entries []SpecialChars, column string) {
+	// Define a mapping of column names to comparison functions
+	compareFuncs := map[string]func(i, j int) bool{
+		"filename": func(i, j int) bool {
+			return strings.ToLower(entries[i].Filename) < strings.ToLower(entries[j].Filename)
+		},
+		"crlf": func(i, j int) bool {
+			return entries[i].Crlf < entries[j].Crlf
+		},
+		"lf": func(i, j int) bool {
+			return entries[i].Lf < entries[j].Lf
+		},
+		"tab": func(i, j int) bool {
+			return entries[i].Tab < entries[j].Tab
+		},
+		"nul": func(i, j int) bool {
+			return entries[i].Nul < entries[j].Nul
+		},
+		"bom8": func(i, j int) bool {
+			return entries[i].Bom8 < entries[j].Bom8
+		},
+		"bom16": func(i, j int) bool {
+			return entries[i].Bom16 < entries[j].Bom16
+		},
+		"nonascii": func(i, j int) bool {
+			return entries[i].NonAscii < entries[j].NonAscii
+		},
+		"bytesread": func(i, j int) bool {
+			return entries[i].BytesRead < entries[j].BytesRead
+		},
+	}
+
+	// Get the comparison function for the specified column
+	compareFunc, ok := compareFuncs[strings.ToLower(column)]
+	if !ok {
+		// Default to sorting by filename if the column is not recognized
+		compareFunc = compareFuncs["filename"]
+	}
+
+	// Sort the entries
+	sort.Slice(entries, compareFunc)
+}
+
+// GetValidSortColumns - returns a list of valid column names for sorting
+func GetValidSortColumns() []string {
+	return []string{
+		"filename", "crlf", "lf", "tab", "nul", "bom8", "bom16", "nonascii", "bytesread",
+	}
 }
