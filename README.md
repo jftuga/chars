@@ -6,7 +6,7 @@ Determine the end-of-line format, tabs, bom, and nul characters
 * For help, run `chars -h`
 
 ```
-chars v2.4.0
+chars v2.5.0
 Determine the end-of-line format, tabs, bom, and nul
 https://github.com/jftuga/chars
 
@@ -18,10 +18,9 @@ chars [filename or file-glob 1] [filename or file-glob 2] ...
   -e string
         exclude based on regular expression; use .* instead of *
   -f string
-        fail with OS exit code=100 if any of the included characters exist; ex: -f crlf,nul,bom8
+        fail with OS exit code=100 if any of the included characters exist; ex: -f crlf,nul,bom8,nonascii
   -j	output results in JSON format; can't be used with -l; does not honor -t or -c
   -l int
-        shorten files names to a maximum of this length
         shorten files names to a maximum of this length
   -t	append a row which includes a total for each column
   -v	display version and then exit
@@ -46,17 +45,17 @@ ___
 
 ```ps1con
 PS C:\chars> .\chars.exe *
-+-----------------+------+-----+-----+------+------+-------+-----------+
-|    FILENAME     | CRLF | LF  | TAB | NUL  | BOM8 | BOM16 | BYTESREAD |
-+-----------------+------+-----+-----+------+------+-------+-----------+
-| .goreleaser.yml |    0 |  59 |   0 |    0 |    0 |     0 |      1066 |
-| LICENSE         |    0 |  21 |   0 |    0 |    0 |     0 |      1068 |
-| README.md       |    0 |  92 |   0 |    0 |    0 |     0 |      3510 |
-| chars.go        |    0 | 246 | 328 |    0 |    0 |     0 |      6477 |
-| go.mod          |    0 |  10 |   2 |    0 |    0 |     0 |       188 |
-| go.sum          |    0 |   6 |   0 |    0 |    0 |     0 |       533 |
-| testfile1       |    0 |  22 |   0 | 3223 |    0 |     1 |      6448 |
-+-----------------+------+-----+-----+------+------+-------+-----------+
++-----------------+------+-----+-----+------+------+-------+-----------+-----------+
+|    FILENAME     | CRLF | LF  | TAB | NUL  | BOM8 | BOM16 | NON-ASCII | BYTESREAD |
++-----------------+------+-----+-----+------+------+-------+-----------+-----------+
+| .goreleaser.yml |    0 |  59 |   0 |    0 |    0 |     0 |         0 |      1066 |
+| LICENSE         |    0 |  21 |   0 |    0 |    0 |     0 |         0 |      1068 |
+| README.md       |    0 |  92 |   0 |    0 |    0 |     0 |         0 |      3510 |
+| chars.go        |    0 | 246 | 328 |    0 |    0 |     0 |         0 |      6477 |
+| go.mod          |    0 |  10 |   2 |    0 |    0 |     0 |         0 |       188 |
+| go.sum          |    0 |   6 |   0 |    0 |    0 |     0 |         0 |       533 |
+| testfile1       |    0 |  22 |   0 | 3223 |    0 |     1 |        27 |      6448 |
++-----------------+------+-----+-----+------+------+-------+-----------+-----------+
 ```
 
 ## Example 2
@@ -68,15 +67,15 @@ PS C:\chars> .\chars.exe *
 
 ```ps1con
 PS C:\chars> .\chars.exe -e perf.*dat -l 32 C:\Windows\System32\p*
-+----------------------------------+------+----+-----+------+------+-------+-----------+
-|             FILENAME             | CRLF | LF | TAB | NUL  | BOM8 | BOM16 | BYTESREAD |
-+----------------------------------+------+----+-----+------+------+-------+-----------+
-| C:\Windows\System32\pcl.sep      |   11 |  0 |   0 |    0 |    0 |     0 |       150 |
-| C:\Windows\System32\perfmon.msc  | 1933 |  0 |   0 |    0 |    0 |     0 |    145519 |
-| C:\Windows\Sys...tmanagement.msc | 1945 |  0 |   0 |    0 |    0 |     0 |    146389 |
-| C:\Windows\System32\pscript.sep  |    2 |  0 |   0 |    0 |    0 |     0 |        51 |
-| C:\Windows\Sys...eryprovider.mof |    0 | 61 |   0 | 2073 |    0 |     1 |      4148 |
-+----------------------------------+------+----+-----+------+------+-------+-----------+
++----------------------------------+------+----+-----+------+------+-------+-----------+-----------+
+|             FILENAME             | CRLF | LF | TAB | NUL  | BOM8 | BOM16 | NON-ASCII | BYTESREAD |
++----------------------------------+------+----+-----+------+------+-------+-----------+-----------+
+| C:\Windows\System32\pcl.sep      |   11 |  0 |   0 |    0 |    0 |     0 |         0 |       150 |
+| C:\Windows\System32\perfmon.msc  | 1933 |  0 |   0 |    0 |    0 |     0 |         0 |    145519 |
+| C:\Windows\Sys...tmanagement.msc | 1945 |  0 |   0 |    0 |    0 |     0 |         0 |    146389 |
+| C:\Windows\System32\pscript.sep  |    2 |  0 |   0 |    0 |    0 |     0 |         0 |        51 |
+| C:\Windows\Sys...eryprovider.mof |    0 | 61 |   0 | 2073 |    0 |     1 |       987 |      4148 |
++----------------------------------+------+----+-----+------+------+-------+-----------+-----------+
 ```
 
 ## Example 3
@@ -98,6 +97,7 @@ $ curl -s https://example.com/ | chars -j
         "bom8": 0,
         "bom16": 0,
         "nul": 0,
+        "nonAscii": 0,
         "bytesRead": 1256
     }
 ]
@@ -111,11 +111,11 @@ $ curl -s https://example.com/ | chars -j
 
 ```console
 $ chars -f lf,tab /etc/group ; echo $?
-+------------+------+----+-----+-----+------+-------+-----------+
-|  FILENAME  | CRLF | LF | TAB | NUL | BOM8 | BOM16 | BYTESREAD |
-+------------+------+----+-----+-----+------+-------+-----------+
-| /etc/group |    0 | 58 |   0 |   0 |    0 |     0 |       795 |
-+------------+------+----+-----+-----+------+-------+-----------+
++------------+------+----+-----+-----+------+-------+-----------+-----------+
+|  FILENAME  | CRLF | LF | TAB | NUL | BOM8 | BOM16 | NON-ASCII | BYTESREAD |
++------------+------+----+-----+-----+------+-------+-----------+-----------+
+| /etc/group |    0 | 58 |   0 |   0 |    0 |     0 |         0 |       795 |
++------------+------+----+-----+-----+------+-------+-----------+-----------+
 
 100
 ```
@@ -152,16 +152,16 @@ $ chars -e '^go' -j * | jq -r '.[] | select(.tab > 0) | [.filename,.tab] | @csv'
 
 ```ps1con
 PS C:\chars> .\chars.exe -t -c -e "\.g.*" *
-+-----------------+------+-----+-----+-----+------+-------+-----------+
-|    FILENAME     | CRLF | LF  | TAB | NUL | BOM8 | BOM16 | BYTESREAD |
-+-----------------+------+-----+-----+-----+------+-------+-----------+
-| LICENSE         |    0 |  21 |   0 |   0 |    0 |     0 |     1,068 |
-| README.md       |    0 | 178 |   4 |   0 |    0 |     0 |     6,656 |
-| STATUS.md       |    0 |  50 |   0 |   0 |    0 |     0 |     3,055 |
-| go.mod          |    0 |  11 |   3 |   0 |    0 |     0 |       214 |
-| go.sum          |    0 |   9 |   0 |   0 |    0 |     0 |       795 |
-| TOTALS: 5 files |    0 | 269 |   7 |   0 |    0 |     0 |    11,788 |
-+-----------------+------+-----+-----+-----+------+-------+-----------+
++-----------------+------+-----+-----+-----+------+-------+-----------+-----------+
+|    FILENAME     | CRLF | LF  | TAB | NUL | BOM8 | BOM16 | NON-ASCII | BYTESREAD |
++-----------------+------+-----+-----+-----+------+-------+-----------+-----------+
+| LICENSE         |    0 |  21 |   0 |   0 |    0 |     0 |         0 |     1,068 |
+| README.md       |    0 | 178 |   4 |   0 |    0 |     0 |         0 |     6,656 |
+| STATUS.md       |    0 |  50 |   0 |   0 |    0 |     0 |         0 |     3,055 |
+| go.mod          |    0 |  11 |   3 |   0 |    0 |     0 |         0 |       214 |
+| go.sum          |    0 |   9 |   0 |   0 |    0 |     0 |         0 |       795 |
+| TOTALS: 5 files |    0 | 269 |   7 |   0 |    0 |     0 |         0 |    11,788 |
++-----------------+------+-----+-----+-----+------+-------+-----------+-----------+
 ```
 
 ___
@@ -193,4 +193,4 @@ ___
 
 * [ellipsis](https://github.com/jftuga/ellipsis) - Go module to insert an ellipsis into the middle of a long string to shorten it
 * [tablewriter](https://github.com/olekukonko/tablewriter) - ASCII table in golang
-* [/u/skeeto](https://old.reddit.com/user/skeeto) and [/u/petreus](https://old.reddit.com/user/ppetreus) provided [code review and suggestions](https://old.reddit.com/r/golang/comments/s64jye/i_wrote_a_cli_tool_to_determine_the_endofline/) 
+* [/u/skeeto](https://old.reddit.com/user/skeeto) and [/u/petreus](https://old.reddit.com/user/ppetreus) provided [code review and suggestions](https://old.reddit.com/r/golang/comments/s64jye/i_wrote_a_cli_tool_to_determine_the_endofline/)

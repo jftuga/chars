@@ -42,7 +42,7 @@ func main() {
 	argsMaxLength := flag.Int("l", 0, "shorten files names to a maximum of this length")
 	argsJSON := flag.Bool("j", false, "output results in JSON format; can't be used with -l; does not honor -t or -c")
 	argsVersion := flag.Bool("v", false, "display version and then exit")
-	argsFail := flag.String("f", "", "fail with OS exit code=100 if any of the included characters exist; ex: -f crlf,nul,bom8")
+	argsFail := flag.String("f", "", "fail with OS exit code=100 if any of the included characters exist; ex: -f crlf,nul,bom8,nonascii")
 	argsFailedFileList := flag.Bool("F", false, "when used with -f, only display a list of failed files, one per line")
 	argsTotals := flag.Bool("t", false, "append a row which includes a total for each column")
 	argsComma := flag.Bool("c", false, "add comma thousands separator to numeric values")
