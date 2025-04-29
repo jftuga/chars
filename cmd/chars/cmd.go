@@ -16,6 +16,7 @@ import (
 	"os"
 	"regexp"
 	"runtime"
+	"strings"
 )
 
 // Usage - display help when no cmd-line args given
@@ -46,6 +47,7 @@ func main() {
 	argsFailedFileList := flag.Bool("F", false, "when used with -f, only display a list of failed files, one per line")
 	argsTotals := flag.Bool("t", false, "append a row which includes a total for each column")
 	argsComma := flag.Bool("c", false, "add comma thousands separator to numeric values")
+	argsSortBy := flag.String("s", "filename", "sort output by column: filename, crlf, lf, tab, nul, bom8, bom16, nonascii, bytesread")
 
 	flag.Usage = Usage
 	flag.Parse()
@@ -61,13 +63,29 @@ func main() {
 		os.Exit(2)
 	}
 
+	// Validate sort column
+	validSortColumns := chars.GetValidSortColumns()
+	sortColumnValid := false
+	sortColumn := strings.ToLower(*argsSortBy)
+	for _, col := range validSortColumns {
+		if sortColumn == col {
+			sortColumnValid = true
+			break
+		}
+	}
+	if !sortColumnValid {
+		_, _ = fmt.Fprintf(os.Stderr, "Invalid sort column: %s\nValid columns are: %s\n",
+			*argsSortBy, strings.Join(validSortColumns, ", "))
+		os.Exit(3)
+	}
+
 	var err error
 	var excludeFiles *regexp.Regexp
 	if len(*argsExclude) > 0 {
 		excludeFiles, err = regexp.Compile(*argsExclude)
 		if err != nil {
 			_, _ = fmt.Fprintf(os.Stderr, "Invalid 'exclude' regular expression: %s\n", *argsExclude)
-			os.Exit(3)
+			os.Exit(4)
 		}
 	}
 
@@ -92,11 +110,16 @@ func main() {
 		failed += current
 	}
 
+	// Sort the results by the specified column
+	if len(allStats) > 0 {
+		chars.SortByColumn(allStats, sortColumn)
+	}
+
 	// output results to either JSON or text table
 	if *argsJSON {
 		_, err := fmt.Println(chars.GetJSON(allStats))
 		if err != nil {
-			os.Exit(4)
+			os.Exit(5)
 		}
 	} else if *argsFailedFileList && len(*argsFail) > 0 && failed > 0 {
 		chars.OutputFailedFileList(allStats)
@@ -104,7 +127,7 @@ func main() {
 		err := chars.OutputTextTable(allStats, *argsMaxLength, *argsTotals, *argsComma)
 		if err != nil {
 			_, _ = fmt.Fprintf(os.Stderr, "Error: %s\n", err)
-			os.Exit(5)
+			os.Exit(6)
 		}
 	}
 
