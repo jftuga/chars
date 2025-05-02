@@ -47,7 +47,7 @@ func main() {
 	argsFailedFileList := flag.Bool("F", false, "when used with -f, only display a list of failed files, one per line")
 	argsTotals := flag.Bool("t", false, "append a row which includes a total for each column")
 	argsComma := flag.Bool("c", false, "add comma thousands separator to numeric values")
-	argsSortBy := flag.String("s", "filename", "sort output by column: filename, crlf, lf, tab, nul, bom8, bom16, nonascii, bytesread")
+	argsSortBy := flag.String("s", "filename", "sort output by column: filename crlf lf tab nul bom8 bom16 nonascii maxconsec bytesread")
 
 	flag.Usage = Usage
 	flag.Parse()
